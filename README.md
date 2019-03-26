@@ -63,7 +63,14 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 
 ## Testing
 Included with the PyXantech project is a Xantech serial simulator. This allows the project to run (test) even if the Xantech amplifier is not connected (even on non-Pi computers)
-- edit *app.py* and set *ACTIVE_SERIAL* to **False**
+- edit *app.py* and change
+```
+  ACTIVE_SERIAL=True
+```
+to
+```
+  ACTIVE_SERIAL=**False**
+```
 - configure source and zones, and run app as above
     
     
