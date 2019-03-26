@@ -1,0 +1,20 @@
+#!/usr/bin/env python2.7
+# PROJECT: PyXantech
+# A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
+# by ProfessorC
+# https://github.com/grandexperiments/pyxantech
+# FILE: "How to run.txt" - suggested running instructions
+'''
+    v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
+'''
+
+Use
+ >python app.py &
+
+instead of
+ >flask run
+
+
+this will start the app as a production webserver using socketio.run() and eventlet (if installed).
+
+Otherwise it will be a development server and produce lots of errors.
