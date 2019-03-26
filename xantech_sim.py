@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 # PROJECT: PyXantech
 # A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
-# by ProfessorC
+# by ProfessorC  (professorc@gmail.com)
 # https://github.com/grandexperiments/pyxantech
 # FILE: xantech-sim.py - to simulate the Xantech serial connection
 # based on the PySerial Simulator by D. Thiebaut
