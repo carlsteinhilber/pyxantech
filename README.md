@@ -12,6 +12,7 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - Status syncs across all devices via web sockets
 - Easy to configure zone and source names
 - Control on/off, source and volume of each zone
+- Xantech simulator included for testing*
 
 ## Requirements
 - RS-232 capable Xantech amp (I use a MRC88, but the MRAUDIO8X8 should also work*)
@@ -26,6 +27,8 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 
 ## Set-up
 - Install Raspberry Pi OS (I usually use *Raspbian Stretch Lite* - no desktop needed)
+- Connect the Xantech serial port to any USB port on the Raspberry Pi using an adapter
+  - (if you wish to run the app on a computer without a Xantech connected, see *Testing* below)
 - Power on the Pi and connect it to the network (hard-wired is recommended)
 - Enable SSH server and shell into Raspberry Pi
 - Python 2.7 should be installed by default in Raspbian. If not, install it.
@@ -57,6 +60,11 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
   
 - Click the power button for any zone, select a source, set the volume, and enjoy.
 
+
+## Testing
+Included with the PyXantech project is a Xantech serial simulator. This allows the project to run (test) even if the Xantech amplifier is not connected (even on non-Pi computers)
+- edit *app.py* and set *ACTIVE_SERIAL* to **False**
+- configure source and zones, and run app as above
     
     
 
