@@ -30,6 +30,8 @@ ACTIVE_USBPORT="/dev/ttyUSB0"
 
 
 
+# **** NO OTHER EDITS NEEDED ****
+
 
 # LIBRARIES (in alphabetical order)
 import atexit
