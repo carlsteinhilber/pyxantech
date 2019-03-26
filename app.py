@@ -14,10 +14,17 @@
     functionality yourself.
 '''
 
-## GLOBAL SETTINGS
-ACTIVE_DEBUG=True  # is debugger active
-ACTIVE_SERIAL=False # is actual Xantech connected to serial port (if false, use simulator)
+
+## GLOBAL SETTINGS (adjust as necessary)
+ACTIVE_SERIAL=True  # is actual Xantech connected to serial port (if 'False', use simulator)
 ACTIVE_MPD=False    # is MusicBox active (deleted, to return later?)
+ACTIVE_DEBUG=False  # is debugger active
+
+# The USB port to use on the Raspberry Pi. This can usually be left as '/dev/ttyUSB0',
+# but if you have multiple devices connected to your Pi, you may need to adjust this
+# value. See Raspberry Pi documentation on specifying USB ports.
+ACTIVE_USBPORT="/dev/ttyUSB0"   
+
 
 
 
@@ -59,7 +66,8 @@ socketio = SocketIO(app, async_mode=async_mode)
 connected_clients={}
 
 # (TODO: investigate only opening serial on commands?)
-serial_port=serial.Serial('/dev/ttyUSB0', timeout=1, baudrate=9600)
+usb_port = ''
+serial_port=serial.Serial(ACTIVE_USBPORT, timeout=1, baudrate=9600)
 
 # store zone and source names
 # (TODO: change zones.txt and sources.txt to JSON for more configuration options)
