@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<!--
+    PROJECT: PyXantech
+    A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
+    by ProfessorC
+    https://github.com/grandexperiments/pyxantech
+    FILE: dashboard-template.html - HTML interface
+
+
+    v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Our House</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="{{ url_for('static',filename='styles/home-control.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static',filename='styles/jquery.mobile.icons.min.css') }}" />
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile.structure-1.4.5.min.css" />
+
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="{{ url_for('static',filename='styles/main.css') }}" />
+
+    <script>
+        var namespace = '/pyxantech';
+
+        var activeZones = [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ];
+        var processingZones = [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ];
+
+    </script>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="row paSge-header top-row">
+            <div class="col-xs-6">
+                <h1>Music Control</h1>
+            </div>
+            <div class="col-xs-6" style="padding-top:10px;">
+                <button type="button" class="btn btn-lg btn-primary btn-blue master-power-button">ALL OFF</button>
+            </div>
+        </div>
+
+        {% set rowcount = 1 %}
+        {% for zone in zones %} 
+            {% if zone.name|length >0 %}
+                <script>
+                    processingZones[{{ zone.num }}] = true;
+                    activeZones[{{ zone.num }}] = true;
+                </script>
+        
+
+
+                <div class="row zone zone{{ zone.num }}">
+                    <span>
+                        <div class="col-xs-12 cSSol-md-1">
+                            <h4>{{ zone.name }}</h4>
+                        </div>
+                        <div class="col-xs-3 col-md-2">
+                            <label>&nbsp;</label>
+                            <button type="button" class="btn btn-lg btn-primary btn-blue action-btn power-btn" data-zone="{{ zone.num }}" data-command="!{{ zone.num }}PT+"><i class="fa fa-power-off" aria-hidden="true"></i></button>
+                        </div>
+                          <div class="col-xs-9 col-md-4">
+                            <div data-role="fieldcontain" style="margin:0;">
+                               <label for="sourceSelect{{ zone.num }}" class="sourceSSSelectLabel">Source:</label>
+                               <select name="sourceSelect{{ zone.num }}" id="sourceSelect{{ zone.num }}" class="source-select" data-zone="{{ zone.num }}" data-command="!{{ zone.num }}SSxx+" data-native-menu="false" data-theme="a" data-form="ui-btn-up-a">
+                                    {% for source in sources %}
+                                        {% if source.name|length >0 %}
+                                            {% if source.num == zone.source %}
+                                                <option value="{{ source.num }}" selected>{{ source.name }}</option>
+                                            {% else %}
+                                                <option value="{{ source.num }}">{{ source.name }}</option>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                
+                                
+                                
+                                <a href="/stations" role="button" class="btn btn-lg btn-default action-btn station-btn" data-zone="{{ zone.num }}" data-remote="false" data-toggle="modal" data-target="#dialModal">Change Station</a>
+                            </div>
+                        </div>
+                      <div class="col-xs-12 col-md-6">
+                            <label for="slider-fill" class="volumeSliderLabel">Volume:</label>
+                            <input type="range" name="volumeLevel{{ zone.num }}" id="volumeLevel{{ zone.num }}" class="volume-slider volume-slider-{{ zone.num }}" value="{{ zone.volume }}" min="0" max="15" full-max="38" data-zone="{{ zone.num }}" data-command="!{{ zone.num }}VOxx+" data-highlight="true">
+                        </div>   
+
+                    </span>
+                </div>
+                {% set rowcount = rowcount + 1 %}
+            {% endif %} 
+        {% endfor %}
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+    </div>
+
+    <div class="loading-curtain" style="z-index:10;"></div>
+    <div class="loading-wrapper" style="z-index:20;">
+        <div class="loading-inner">
+            <span>Loading...</span>
+        </div>
+    </div>
+
+<style>
+    .modal .modal-dialog .modal-btn {
+        width:auto;
+        float:right;
+        margin-right:10px;
+    }
+</style>    
+<!-- bootstrap modal -->
+<div class="modal fade" id="dialModal" tabindex="-1" role="dialog" aria-labelledby="dialModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-body">
+    
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary modal-btn">Change Station</button>
+        <button type="button" class="btn btn-default modal-btn" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>    
+    
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+    <!-- javascript websocket library -->
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+
+    
+    
+    <script>
+
+
+        $(document).ready(function() {
+            console.log("DOCUMENT READY");
+			$(".ui-slider-track").css("pointer-events","none"); 
+			$(".ui-slider-track").css("disabled","disabled");
+
+			$(".ui-slider-handle").css("pointer-events","all"); 
+
+
+            $(".zone").filter(function(index, element){
+                // console.log("what does this do?");
+                return index % 2 == 0;
+            }).addClass("row-odd");            
+            
+            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+
+            function processZone(zone, mode) {
+                console.log('PROCESSING ZONE');
+                processingZones[zone] = mode;
+                console.log(processingZones);
+                if (processingZones.some(function(zone) {
+                        return zone;
+                    })) {
+                    loadingModal(true);
+                } else {
+                    loadingModal(false);
+                }
+            }
+            $("#dialModal").on("show.bs.modal", function(e) {
+                var link = $(e.relatedTarget);
+                $(this).find(".modal-body").load(link.attr("href"));
+            });
+        
+            function loadingModal(mode, message) {
+                if (mode && $(".loading-curtain").is(":hidden")) {
+                    $(".loading-wrapper span").html("Sending...");
+                    $(".loading-curtain").fadeIn("slow");
+                    $(".loading-wrapper").fadeIn("slow");
+                } else {
+                    $(".loading-curtain").fadeOut("slow");
+                    $(".loading-wrapper").fadeOut("slow");
+                }
+            }
+            
+            function setStationButton(zone){
+                selectMenu="#sourceSelect"+zone;
+                text = $(selectMenu).find(":selected").text();
+                stationBtn=".zone"+zone+" .station-btn";
+                selectBtn=selectMenu+"-button";
+                if(text=="PANDORA"){
+                    $(selectBtn).addClass("with-station");
+                    $(stationBtn).show();
+                } else {
+                    $(selectBtn).removeClass("with-station");
+                    $(stationBtn).hide();
+                }
+           }
+
+            
+            function setStatus(zone, statusArray) {
+                // processZone(zone,true);
+
+                console.log(statusArray);
+                console.log("setStatus: zone=" + zone);
+
+                $('.zone' + zone + ' .power-btn').removeClass('PR0').removeClass('PR1').addClass('PR' + statusArray["power"]);
+                $('.zone' + zone + ' .volume-slider').val(statusArray["volume"]).slider("refresh");
+
+                $('.zone' + zone + ' .source-select').selectedIndex = statusArray["source"];
+
+                $('.zone' + zone + ' .source-select').val(statusArray["source"]).attr('selected', true).siblings('option').removeAttr('selected');
+
+                $('.zone' + zone + ' select.source-select').selectmenu("refresh");
+                setStationButton(zone);
+                processZone(zone, false);
+
+                /*
+                Power – On
+                Source – 4
+                Volume – 8
+                Mute – Off
+                Treble – 7
+                Bass – 7
+                Balance – 32
+                Linked – No
+                Paged – No      
+
+                PR1 SS1 VO0 MU0 TR7 BS7 BA32 LS0 PS0
+                */
+
+            };
+
+
+            function getStatus(zone) {
+                console.log("getStatus called:" + zone);
+                volume = $('.volume-slider-'+zone).val();
+                socket.emit('xantech_status', {
+                    'zone': zone,
+                    'volume': volume
+                });
+
+                return true;
+            };
+
+            function getAllStatus() {
+                loadingModal(true);
+                for (var zone = 0; zone < activeZones.length; zone++) {
+                    if (activeZones[zone]) getStatus(zone);
+
+                }
+            };
+
+            socket.on('connect', function() {
+                socket.emit('xantech_message', {
+                    data: 'Client connected!'
+                });
+            });
+
+            socket.on('done_loading', function(msg) {
+                console.log(msg);
+                getAllStatus();
+            });
+
+            socket.on('xantech_response', function(msg) {
+                console.log(msg);
+            });
+
+            socket.on('set_status', function(msg) {
+                console.log(msg);
+                console.log(msg.zone);
+                setStatus(msg.zone, msg.status);
+            });
+
+            $(".power-btn").click(function(event) {
+                event.preventDefault();
+                console.log("click power button")
+                zone = $(event.currentTarget).data('zone');
+                volume = $('.volume-slider-'+zone).val();
+                
+                socket.emit('xantech_command', {
+                    'zone': zone,
+                    'volume':volume,
+                    'command': '!' + zone + 'PT+'
+                });
+
+                /*
+                socket.emit('xantech_command', {
+                    'zone': $this.data('zone'),
+                    'command': $this.data('command')
+                });
+                */
+                return false;
+            });
+
+            $(".source-select").on("change", function(event, ui) {
+                zone = $(event.currentTarget).data('zone');
+                source = $(event.currentTarget).val();
+                volume = $('.volume-slider-'+zone).val();
+                console.log(volume);
+                socket.emit('xantech_command', {
+                    'zone': zone,
+                    'volume':volume,
+                    'command': '!' + zone + 'SS' + source + '+'
+                });
+                console.log('set zone ' + zone + ' to source: ' + source);
+                setStationButton(zone);
+            });
+
+            $(".volume-slider").on("slidestop", function(event, ui) {
+                zone = $(event.currentTarget).data('zone');
+                volume = $(event.currentTarget).val();
+
+                socket.emit('xantech_command', {
+                    'zone': zone,
+                    'volume': volume,
+                    'command': '!' + zone + 'VO' + volume + '+'
+                });
+
+                console.log('set zone ' + zone + ' to volume: ' + volume);
+            });
+
+            $(".master-power-button").on("click", function(event, ui) {
+                event.preventDefault();
+                volume = $('.volume-slider-1').val();
+                socket.emit('xantech_command', {
+                    'zone': 1,
+                    'volume': volume,
+                    'command':'!AO+'
+                });
+                getAllStatus();
+                /*
+                socket.emit('xantech_command', {
+                    'zone': $this.data('zone'),
+                    'command': $this.data('command')
+                });
+                */
+                return false;
+            });
+
+            $(window).on("beforeunload", function(){
+                socket.emit('disconnect_request', {
+                    data: 'Client disconnecting!'
+                });
+            });
+
+        });
+
+    
+    
+    </script>
+
+
+
+</body>
+
+
+</html>
