@@ -69,7 +69,7 @@ Included with the PyXantech project is a Xantech serial simulator. This allows t
 ```
 to
 ```
-  ACTIVE_SERIAL=**False**
+  ACTIVE_SERIAL=False
 ```
 - configure source and zones, and run app as above
     
