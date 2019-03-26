@@ -14,8 +14,10 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - Control on/off, source and volume of each zone
 - Xantech simulator included for testing*
 
+(* see *Testing* below for more information)
+
 ## Requirements
-- RS-232 capable Xantech amp (I use a MRC88, but the MRAUDIO8X8 should also work*)
+- RS-232 capable Xantech amp (I use a MRC88, but the MRAUDIO8X8 should also work**)
 - Raspberry Pi, running:
   - Python (current PyXantech supports only 2.7)
   - Flask (http://flask.pocoo.org/)
@@ -24,6 +26,8 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
   - PySerial (https://pythonhosted.org/pyserial/)
   - PyXantech (this project)
 - USB-to-serial (9-pin RS-232) adapter/dongle (something like this https://www.amazon.com/Sabrent-Converter-Prolific-Chipset-CB-DB9P/dp/B00IDSM6BW/ref=sr_1_1_sspa)
+
+(** - if you're looking to buy a Xantech amplifier specifically for this purpose, before purchase please be sure you research whether the particular product you want to buy has an RS-232 port and supports the Xantech Serial Communication Protocol (aka Xantech's "MRC88 RS232 'DIGITAL' INTERFACE"). BEWARE: products like the smaller 4-zone MRAUDIO4X4 and other Xantech 8-zone products are known to have the RS-232 port, but do *not* support the protocol. I can not be held responsible if you purchase the wrong product.)
 
 ## Set-up
 - Install Raspberry Pi OS (I usually use *Raspbian Stretch Lite* - no desktop needed)
