@@ -6,6 +6,7 @@
 # FILE: xantech-sim.py - to simulate the Xantech serial connection
 # based on the PySerial Simulator by D. Thiebaut
 # http://www.science.smith.edu/dftwiki/index.php/PySerial_Simulator
+
 '''
     v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
 '''

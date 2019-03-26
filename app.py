@@ -9,7 +9,7 @@
 '''
 
 '''
-    For Pandora, I've been using MusicBox/MPD but I've removed those functions
+    For Pandora, I've been using MusicBox/MPD but I've removed this functionality
     due to issues. They may be added in a future release, or feel free to add
     functionality yourself.
 '''

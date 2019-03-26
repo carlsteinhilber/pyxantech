@@ -184,6 +184,7 @@
                 return index % 2 == 0;
             }).addClass("row-odd");            
             
+            // connect to the socket server
             var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
             function processZone(zone, mode) {

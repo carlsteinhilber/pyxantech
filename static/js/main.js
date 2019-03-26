@@ -9,7 +9,6 @@
     v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
 */
 
-
         $(document).ready(function() {
             console.log("DOCUMENT READY");
 			$(".ui-slider-track").css("pointer-events","none"); 
