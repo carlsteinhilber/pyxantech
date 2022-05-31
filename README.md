@@ -44,10 +44,12 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - Install dependencies
 ```
   pip install flask
-  pip install flask_socketio
+  pip install Flask-SocketIO==4.3.2
   pip install eventlet
   pip install pyserial
 ```
+(since this project still uses Python 2.7, it's important to specify the compatible version of flash-socketio - v4.3.2)
+
 - Install this project (either via GIT on the Pi, or download the ZIP and get it onto the Pi some other way)
 - Edit sources.txt
   - Put the name of one source per line (source 1 on line 1, source 2 on line 2, and so on... if you don't have a given source number connected, simply enter a null line)
