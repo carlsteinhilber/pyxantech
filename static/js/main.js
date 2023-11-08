@@ -7,207 +7,240 @@
 
 
     v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
+    v.2.0 - Python 3/JQuery Mobile 1.5 release  2023/10/25 - GNU General Public License (GPL 2.0)
 */
 
-        $(document).ready(function() {
-            console.log("DOCUMENT READY");
-			$(".ui-slider-track").css("pointer-events","none"); 
-			$(".ui-slider-track").css("disabled","disabled");
+$(document).ready(function () {
+    console.log("DOCUMENT READY");
+    processZone(1, true);
 
-			$(".ui-slider-handle").css("pointer-events","all"); 
+    $(".zone").filter(function(index, element){
+        return index % 2 == 1;
+    }).addClass("row-odd");            
 
+    console.log("SOCKET CREATE:");
+    console.log(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+    console.log(socket);
 
-            $(".channel").each(function(index, element){
-                console.log("what does this do?");
-                return index % 3 == 2;
-            }).addClass("row-even");            
-            
-            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
-
-            function processChannel(chan, mode) {
-                console.log('PROCESSING CHANNEL');
-                processingChannels[chan] = mode;
-                console.log(processingChannels);
-                if (processingChannels.some(function(channel) {
-                        return channel;
-                    })) {
-                    loadingModal(true);
-                } else {
-                    loadingModal(false);
-                }
+    function processZone(zone, mode) {
+            console.log('PROCESSING ZONE');
+            processingZones[zone] = mode;
+            console.log(processingZones);
+            if (processingZones.some(function(zone) {
+                    return zone;
+                })) {
+                console.log("found some processing");
+                loadingModal(true);
+            } else {
+                loadingModal(false);
             }
-
-            
-            function loadingModal(mode, message) {
-                if (mode && $(".loading-curtain").is(":hidden")) {
-                    $(".loading-wrapper span").html("Sending...");
-                    $(".loading-curtain").fadeIn("slow");
-                    $(".loading-wrapper").fadeIn("slow");
-                } else {
-                    $(".loading-curtain").fadeOut("slow");
-                    $(".loading-wrapper").fadeOut("slow");
-                }
-            }
-
-            
-            function setStatus(chan, statusArray) {
-                // processChannel(chan,true);
-
-                console.log(statusArray);
-                console.log("setStatus: channel=" + chan);
-
-                $('.chan' + chan + ' .power-btn').removeClass('PR0').removeClass('PR1').addClass('PR' + statusArray["power"]);
-                $('.chan' + chan + ' .volume-slider').val(statusArray["volume"]).slider("refresh");
-
-                $('.chan' + chan + ' .source-select').selectedIndex = statusArray["source"];
-
-                $('.chan' + chan + ' .source-select').val(statusArray["source"]).attr('selected', true).siblings('option').removeAttr('selected');
-
-                $('.chan' + chan + ' select.source-select').selectmenu("refresh");
-
-                processChannel(chan, false);
-
-                /*
-                Power – On
-                Source – 4
-                Volume – 8
-                Mute – Off
-                Treble – 7
-                Bass – 7
-                Balance – 32
-                Linked – No
-                Paged – No      
-
-                PR1 SS1 VO0 MU0 TR7 BS7 BA32 LS0 PS0
-                */
-
-            };
+    }
 
 
-            function getStatus(channel) {
-                console.log("getStatus called:" + channel);
-                volume = $('.volume-slider-'+channel).val();
-                socket.emit('xantech_status', {
-                    'channel': channel,
-                    'volume': volume
-                });
+    function loadingModal(mode, message) {
+        //  if (mode && $(".loading-curtain").is(":hidden")) {
+        if (mode) {
+           console.log("opening modal");
+            $(".loading-wrapper span").html("Loading...");
+            $(".loading-curtain").fadeIn("slow");
+            $(".loading-wrapper").fadeIn("slow");
+        } else {
+            console.log("closing modal");
+            $(".loading-curtain").fadeOut("slow");
+            $(".loading-wrapper").fadeOut("slow");
+        }
+    }
+    
+    function setStatus(zone, statusArray) {
+        // processZone(zone,true);
 
-                return true;
-            };
+        console.log(statusArray);
+        console.log("setStatus: zone=" + zone);
 
-            function getAllStatus() {
-                // loadingModal(true);
-                for (var channel = 0; channel < activeChannels.length; channel++) {
-                    if (activeChannels[channel]) getStatus(channel);
+        $('#powerButton' + zone).removeClass('PR0').removeClass('PR1').addClass('PR' + statusArray["power"]);
 
-                }
-            };
+        // set VOLUME SLIDER value
+        console.log("setting volume of zone " + zone + " to "+ statusArray["volume"]);
+        var volumeSlider = $('#volumeSlider' + zone);
+        volumeSlider.data("sendSocketEvent", false);
+        volumeSlider.val(statusArray["volume"]);
+        volumeSlider.trigger('change');
+        volumeSlider.data("sendSocketEvent", true);
 
-            socket.on('connect', function() {
-                socket.emit('my_event', {
-                    data: 'I\'m connected!'
-                });
-            });
+        // set SOURCE SELECTOR value
+        console.log("setting source of zone " + zone + " to "+ statusArray["source"]);
+        var sourceSelect = $('#sourceSelect' + zone);
+        console.log(sourceSelect);
+        sourceSelect.data("sendSocketEvent", false);
+        sourceSelect.selectedIndex = statusArray["source"];
+        sourceSelect.val(statusArray["source"]).attr('selected', true).siblings('option').removeAttr('selected');
+        sourceSelect.data("sendSocketEvent", true);
 
-            socket.on('done_loading', function(msg) {
-                console.log(msg);
-                getAllStatus();
-            });
+        // statusArray["source"]
+        /*
+        $('#sourceSelect'+zone).selectedIndex = statusArray["source"];
 
-            socket.on('my_response', function(msg) {
-                console.log(msg);
-            });
+        $('.zone' + zone + ' .source-select').val(statusArray["source"]).attr('selected', true).siblings('option').removeAttr('selected');
+        */
 
-            socket.on('set_status', function(msg) {
-                console.log(msg);
-                console.log(msg.channel);
-                setStatus(msg.channel, msg.status);
-            });
+        // $('.zone' + zone + ' select.source-select').selectmenu("refresh");
 
-            $(".power-btn").click(function(event) {
-                event.preventDefault();
-                channel = $(event.currentTarget).data('channel');
-                volume = $('.volume-slider-'+channel).val();
-                
-                socket.emit('xantech_command', {
-                    'channel': channel,
-                    'volume':volume,
-                    'command': '!' + channel + 'PT+'
-                });
+        processZone(zone, false);
 
-                /*
-                socket.emit('xantech_command', {
-                    'channel': $this.data('channel'),
-                    'command': $this.data('command')
-                });
-                */
-                return false;
-            });
+        /*
+        Power – On
+        Source – 4
+        Volume – 8
+        Mute – Off
+        Treble – 7
+        Bass – 7
+        Balance – 32
+        Linked – No
+        Paged – No      
 
-            $(".source-select").on("change", function(event, ui) {
-                channel = $(event.currentTarget).data('channel');
-                source = $(event.currentTarget).val();
-                volume = $('.volume-slider-'+channel).val();
-                console.log(volume);
-                socket.emit('xantech_command', {
-                    'channel': channel,
-                    'volume':volume,
-                    'command': '!' + channel + 'SS' + source + '+'
-                });
+        PR1 SS1 VO0 MU0 TR7 BS7 BA32 LS0 PS0
+        */
 
-                console.log('set channel ' + channel + ' to source: ' + source);
-            });
-
-            $(".volume-slider").on("slidestop", function(event, ui) {
-                channel = $(event.currentTarget).data('channel');
-                volume = $(event.currentTarget).val();
-
-                socket.emit('xantech_command', {
-                    'channel': channel,
-                    'volume': volume,
-                    'command': '!' + channel + 'VO' + volume + '+'
-                });
-
-                console.log('set channel ' + channel + ' to volume: ' + volume);
-            });
-
-            $(".master-power-button").on("click", function(event, ui) {
-                event.preventDefault();
-                volume = $('.volume-slider-1').val();
-                socket.emit('xantech_command', {
-                    'channel': 1,
-                    'volume': volume,
-                    'command':'!AO+'
-                });
-                getAllStatus();
-                /*
-                socket.emit('xantech_command', {
-                    'channel': $this.data('channel'),
-                    'command': $this.data('command')
-                });
-                */
-                return false;
-            });
+    };
 
 
+    function getStatus(zone) {
+        console.log("getStatus called:" + zone);
+        volume = $('.volume-slider-'+zone).val();
+        socket.emit('xantech_status', {
+            'zone': zone,
+            'volume': volume
+        });
+        return true;
+    };
+
+    function getAllStatus() {
+        // loadingModal(false);
+        // TODO: pass the number of active zones in the UI to confirm on server
+        socket.emit('xantech_all_status', { 'zones': 0 });
+    };
+
+    socket.on('connect', function() {
+        socket.emit('xantech_message', {
+            data: 'Client connected!'
+        });
+    });
+
+    socket.on('done_loading', function(msg) {
+        console.log("DONE LOADING");
+        console.log(msg);
+        getAllStatus();
+    });
+
+    socket.on('xantech_response', function(msg) {
+        console.log(msg);
+    });
+
+    socket.on('set_status', function(msg) {
+        console.log('ClientSide/set_status:');
+        console.log(msg);
+        console.log(msg.zone);
+        setStatus(msg.zone, msg.status);
+    });
+
+    $(".power-button").click(function(event) {
+        event.preventDefault();
+        console.log("click power button")
+        zone = $(this).data("zone");
+        volume = $('#volumeSlider'+zone).val();
+        
+        console.log({
+            'zone': zone,
+            'volume':volume,
+            'command': '!' + zone + 'PT+'
+        });
+
+
+        socket.emit('xantech_command', {
+            'zone': zone,
+            'volume':volume,
+            'command': '!' + zone + 'PT+'
         });
 
         /*
-        $(document).on('stop', 'input[type=range]', function() {
-            console.log("change");
-        });  
+        socket.emit('xantech_command', {
+            'zone': $this.data('zone'),
+            'command': $this.data('command')
+        });
         */
+        return false;
+    });
 
-        /*
-        $( ".volume-slider" ).slider({
-  stop: function( event, ui ) {  console.log("change"); }
+
+    $(".source-select").on("change", function(event, ui) {
+        var zone = $(event.currentTarget).data('zone');
+        var source = $(event.currentTarget).val();
+        var volume = $('#volumeSlider'+zone).val();
+
+        if ($(this).data("sendSocketEvent")){
+            socket.emit('xantech_command', {
+                'zone': zone,
+                'volume':volume,
+                'command': '!' + zone + 'SS' + source + '+'
+            });
+            console.log('set zone ' + zone + ' to source: ' + source);
+        }
+    });
+
+    $(".volume-slider").on("input",function(){
+        // console.log("hi");
+        var zone = $(this).data("zone");
+        // console.log(zone);
+        $("#volumeDisplay"+zone).val($(this).val());
+    });
+    $(".volume-slider").on("change",function(){
+        console.log("volume changed");
+        var zone = $(this).data("zone");
+        var volume = $(this).val();
+        $("#volumeDisplay"+zone).val(volume);
+
+        if ($(this).data("sendSocketEvent")){
+            console.log("send socket event");
+            console.log({
+            'zone': zone,
+            'volume': volume,
+            'command': '!' + zone + 'VO' + volume + '+'
+            });
+            socket.emit('xantech_command', {
+                    'zone': zone,
+                    'volume': volume,
+                    'command': '!' + zone + 'VO' + volume + '+'
+                });
+
+            console.log('set zone ' + zone + ' to volume: ' + volume);
+        }
+    });
+
+    $(".master-power-button").on("click", function(event, ui) {
+            event.preventDefault();
+            volume = $('#volumeSlider1').val();
+            socket.emit('xantech_command', {
+                'zone': 0,
+                'volume': 0,
+                'command':'!AO+'
+            });
+            // getAllStatus();
+            /*
+            socket.emit('xantech_command', {
+                'zone': $this.data('zone'),
+                'command': $this.data('command')
+            });
+            */
+            return false;
+    });
+
+    $(window).on("beforeunload", function(){
+        socket.emit('disconnect_request', {
+            data: 'Client disconnecting!'
+        });
+    });
+
+
 });
-        */
-        /*
-        $('.volume-slider').on('mouseup',function(){
-            $("#statusField").val("change");
-            
-        })
-        */
 
-        ///   });

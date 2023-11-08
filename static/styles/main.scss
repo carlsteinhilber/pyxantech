@@ -1,0 +1,66 @@
+:root {
+    --primary: #1e88e5;
+}
+main {
+    margin:0 !important;
+    padding:0 !important;
+}
+header {
+    background-color: #1e88e5;
+}
+h1 {
+    color:#fff;
+    margin:0;
+    padding:16px;
+}
+h4 {
+    margin:0;
+}
+
+.volume-display {
+    border: none;
+    border-radius: 0;
+    padding:0 !important;
+    text-align:right;
+}
+article {
+    box-shadow: none;
+    border-radius: 0px;
+    margin:0;
+    padding:10px 15px;
+    &>header {
+        background-color: transparent;
+        margin:0;
+        padding:0;
+    }
+}
+.master-power-button {
+    background-color: transparent;
+    border: 1px solid #fff;
+    float: right;
+    width: auto;
+    margin: 14px 20px;
+    &:active {
+        background-color: green;
+    }
+}
+.power-button {
+    // background-color: #000;
+    &.PR1 {
+        background-color: green;
+    }
+}
+
+
+.ui-page-theme-a button.power-btn:active,
+.ui-page-theme-a button.power-btn:hover {
+    /* background-color:#3388cc; */
+    background-color: #000000 !important;
+}
+
+.row-odd {
+    background-color: #e4f1fc;
+}
+
+
+@import 'scss/grid', 'scss/sliders', 'scss/tabs', 'scss/loading'

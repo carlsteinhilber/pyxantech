@@ -1,0 +1,24 @@
+{
+    "zones": [
+        {"zone":1, "name":"Living Room", "enabled": true, "default_volumne": 5 },
+        {"zone":2, "name":"", "enabled": false, "default_volumne": 5  },
+        {"zone":3, "name":"Kitchen", "enabled": true, "default_volumne": 5  },
+        {"zone":4, "name":"Dining Room", "enabled": true, "default_volumne": 5  },
+        {"zone":5, "name":"Backyard", "enabled": true, "default_volumne": 5  },
+        {"zone":6, "name":"", "enabled": false, "default_volumne": 5  },
+        {"zone":7, "name":"", "enabled": false, "default_volumne": 5  },
+        {"zone":8, "name":"", "enabled": false, "default_volumne": 5  }
+    ],
+    "sources": [
+        {"source":1, "name":"Pandora", "enabled": true, "type": "streaming", "url":"http://192.168.1.31:3000/" },
+        {"source":2, "name":"TiVO", "enabled": true, "type": "device" },
+        {"source":3, "name":"Apple TV", "enabled": true, "type": "device" },
+        {"source":4, "name":"CD Player", "enabled": true, "type": "device" },
+        {"source":5, "name":"Plex", "enabled": true, "type": "streaming", "url":"http://192.168.1.29:32500/" },
+        {"source":6, "name":"", "enabled": false, "type": "device" },
+        {"source":7, "name":"", "enabled": false, "type": "device" },
+        {"source":8, "name":"", "enabled": false, "type": "device" }
+    ]
+
+
+}

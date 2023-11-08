@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # PROJECT: PyXantech
 # A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
 # by ProfessorC  (professorc@gmail.com)
@@ -9,13 +9,14 @@
 
 '''
     v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
+    v.2.0 - Python 3/Pico release  2023/10/25 - GNU General Public License (GPL 2.0)
 '''
 
 '''
     Receives Xantech commands, and returns Xantech query results as if the Xantech were connected
     to the serial/USB port. Some commands are not yet supported - notably the subzone commands - since
     I don't have a setup available to test. Feel free to fill them in if you need them.
-    
+
     It also does not handle zone metadata
 '''
 
@@ -28,7 +29,7 @@ xantech=[
     { 'PR':1, 'SS':1, 'VO':14, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 }, # zone 1
     { 'PR':0, 'SS':2, 'VO':3, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 },  # zone 2
     { 'PR':0, 'SS':3, 'VO':5, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 },  # zone 3
-    { 'PR':0, 'SS':1, 'VO':8, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 },  # zone 4 
+    { 'PR':0, 'SS':1, 'VO':8, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 },  # zone 4
     { 'PR':0, 'SS':2, 'VO':8, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 },  # zone 5
     { 'PR':0, 'SS':3, 'VO':8, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 },  # zone 6
     { 'PR':0, 'SS':1, 'VO':8, 'MU':0, 'TR':7, 'BS':7, 'BA':32, 'LS':0, 'PS':0 },  # zone 7
@@ -40,11 +41,13 @@ toggleOnOff=[1,0]
 
 
 def parseIncomingCommand(cmd):
-    cmdIn=cmd
+    cmdIn=str(cmd)
+    print("parseIncomingCommand cmd: " + cmdIn)
+
     # is command a command or a query
     cmdMode=cmdIn[0]
     cmdIn=cmdIn[1:]
-    
+
     # is next character a zone
     cmdZone=0
     cmdZoneStr=""
@@ -52,26 +55,32 @@ def parseIncomingCommand(cmd):
         cmdZoneStr=cmdIn[0]
         cmdZone=int(cmdZoneStr)
         cmdIn=cmdIn[1:]
-    
+
     # next two characters should always be the command action
     cmdAction=cmdIn[:2]
     cmdIn=cmdIn[2:]
+
+    print("parseIncomingCommand cmdMode: " + str(cmdMode))
+    print("parseIncomingCommand cmdIn: " + str(cmdIn))
+    print("parseIncomingCommand cmdZone: " + str(cmdZone))
+    print("parseIncomingCommand cmdZoneStr: " + str(cmdZoneStr))
+    print("parseIncomingCommand cmdAction: " + str(cmdAction))
 
     notsupportedyet=False
 
     result=""
     if(cmdMode=="!"):
-        # command was an intruction
-        
+        # command was an instruction
+
         # get everything remaining minus the '+'
         cmdIn=cmdIn[:-1]
         value=0
-        
+
         # if the remainder is numeric, make it an integer
         if(cmdIn.isdigit()):
             value=int(cmdIn)
 
-        
+
         # we could combine everything into 3 conditions, but I'm keeping them
         # separated out for readibility
         # REALLY wish Python had a case statement!
@@ -81,41 +90,41 @@ def parseIncomingCommand(cmd):
             i = 0
             while i < len(xantech):
                 xantech[i]["PR"]=0
-                i += 1           
+                i += 1
         elif(cmdAction=="PR"):
             # set power for zone to mode
             xantech[cmdZone][cmdAction]=value
         elif(cmdAction=="PT"):
             # toggle power for zone
             xantech[cmdZone]['PR']=toggleOnOff[xantech[cmdZone]['PR']]
-        elif(cmdAction=="SS"):    
+        elif(cmdAction=="SS"):
             # set source for zone to value
             xantech[cmdZone][cmdAction]=value
-        elif(cmdAction=="VO"):    
+        elif(cmdAction=="VO"):
             # set volume for zone to value
             xantech[cmdZone][cmdAction]=value
-        elif(cmdAction=="VI"):    
+        elif(cmdAction=="VI"):
             # increment volume for zone
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]+1
-        elif(cmdAction=="VD"):    
+        elif(cmdAction=="VD"):
             # decrement volume for zone
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]-1
-        elif(cmdAction=="VZ"):    
+        elif(cmdAction=="VZ"):
             # set volume for subzone to value
             xantech[cmdZone][cmdAction]=value
-        elif(cmdAction=="VX"):    
+        elif(cmdAction=="VX"):
             # increment volume for subzone
             notsupportedyet=True
-        elif(cmdAction=="VY"):    
+        elif(cmdAction=="VY"):
             # decrement volume for subzone
             notsupportedyet=True
-        elif(cmdAction=="MU"):    
+        elif(cmdAction=="MU"):
             # set mute for zone to mode
             xantech[cmdZone][cmdAction]=value
         elif(cmdAction=="MT"):
             # toggle mute for zone
             xantech[cmdZone]['MU']=toggleOnOff[xantech[cmdZone]['MU']]
-        elif(cmdAction=="MZ"):    
+        elif(cmdAction=="MZ"):
             # set mute for subzone to mode
             # xantech[cmdZone][cmdAction]=value
             notsupportedyet=True
@@ -125,53 +134,53 @@ def parseIncomingCommand(cmd):
         elif(cmdAction=="TR"):
             # set treble for zone to value
             xantech[cmdZone][cmdAction]=value
-        elif(cmdAction=="TI"):    
+        elif(cmdAction=="TI"):
             # increment treble for zone
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]+1
-        elif(cmdAction=="TD"):    
+        elif(cmdAction=="TD"):
             # decrement treble for zone
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]-1
         elif(cmdAction=="BS"):
             # set bass for zone to value
             xantech[cmdZone][cmdAction]=value
-        elif(cmdAction=="BI"):    
+        elif(cmdAction=="BI"):
             # increment bass for zone
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]+1
-        elif(cmdAction=="BD"):    
+        elif(cmdAction=="BD"):
             # decrement bass for zone
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]-1
         elif(cmdAction=="BA"):
             # set balance for zone to value
             xantech[cmdZone][cmdAction]=value
-        elif(cmdAction=="BL"):    
+        elif(cmdAction=="BL"):
             # step balance for zone to left
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]+1
-        elif(cmdAction=="BR"):    
+        elif(cmdAction=="BR"):
             # step balance for zone to right
             xantech[cmdZone][cmdAction]=xantech[cmdZone][cmdAction]-1
-        elif(cmdAction=="MC"):    
+        elif(cmdAction=="MC"):
             # execute macro number (zone = macro #)
             notsupportedyet=True
-        elif(cmdAction=="MK"):    
+        elif(cmdAction=="MK"):
             # execute keyboard button
             notsupportedyet=True
-        elif(cmdAction=="ZA"):    
+        elif(cmdAction=="ZA"):
             # zone activity auto update
             notsupportedyet=True
-        elif(cmdAction=="ZP"):    
+        elif(cmdAction=="ZP"):
             # zone periodic auto update
             notsupportedyet=True
         else:
             notsupportedyet=True
-            
+
         if(notsupportedyet):
             # just a nicety in case we receive a command we don't support/understand
             result="!ERROR+"
         else:
-            # don't remember the actual return value... could be just "OK", or "OK+", 
+            # don't remember the actual return value... could be just "OK", or "OK+",
             # but it doesn't matter because the reader in app.py strips off !'s and +'s anyway
-            result="!OK+"    
-          
+            result="!OK+"
+
     elif(cmdMode=="?"):
         # we could combine everything into 3 conditions, but I'm keeping them
         # separated out for readibility
@@ -223,23 +232,23 @@ def parseIncomingCommand(cmd):
             # get data of zone
             result="#"+cmdZoneStr+"ZS PR"+str(xantech[cmdZone]['PR'])+" SS"+str(xantech[cmdZone]['SS'])+" VO"+str(xantech[cmdZone]['VO'])+" MU"+str(xantech[cmdZone]['MU'])+" TR"+str(xantech[cmdZone]['TR'])+" BS"+str(xantech[cmdZone]['BS'])+" BA"+str(xantech[cmdZone]['BA'])+" LS"+str(xantech[cmdZone]['LS'])+" PS"+str(xantech[cmdZone]['PS'])+"+"
         elif(cmdAction=="ZM"):
-            # get metadata of zone  
+            # get metadata of zone
             notsupported=True
         else:
             notsupportedyet=True
-            
+
         if(notsupportedyet):
             # just a nicety in case we receive a command we don't support/understand
             result="!ERROR+"
-       
-        
-        
-    print result
-    return result
-        
-        
 
-# a Serial class emulator 
+
+
+    print(result)
+    return result
+
+
+
+# a Serial class emulator
 class Serial:
 
     ## init(): the constructor.  Many of the arguments have default values
@@ -278,10 +287,11 @@ class Serial:
     ## write()
     # writes a string of characters to the Xantech
     def write( self, string ):
-        print( 'Xantech received: "' + string + '"' )
-        self._receivedData += string
+        strReceived = str(string.decode())
+        print( 'Xantech received: "' + strReceived + '"' )
+        self._receivedData = strReceived
         # parse out string into a Xantech command
-        self._data=parseIncomingCommand(string)
+        self._data=parseIncomingCommand(strReceived)
 
     ## read()
     # reads n characters from the fake Xantech. Actually n characters
@@ -302,13 +312,13 @@ class Serial:
             return s
         else:
             return ""
-    
+
     ## flushInput()
     # clear the incoming "buffer"
     # included here for completeness
     def flushInput(self):
         self._receivedData=""
-        
+
     ## flushOutput()
     # clear the outgoing "buffer"
     # included here for completeness
@@ -323,3 +333,4 @@ class Serial:
                + " bytesize=%d, parity='%s', stopbits=%d, xonxoff=%d, rtscts=%d)"\
                % ( self.bytesize, self.parity, self.stopbits, self.xonxoff,
                    self.rtscts )
+
