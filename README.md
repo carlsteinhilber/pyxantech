@@ -1,5 +1,6 @@
 # pyxantech
-###UPDATE 2023-10-25: now migrated to Python 3
+
+### UPDATE 2023-10-25: now migrated to Python 3
 
 A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
 
@@ -7,7 +8,7 @@ A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zo
 The MRAUDIO8X8M / MRC88 / MRC88CTL are eight-source, eight-zone distribution amplifiers produced by Xantech in the early-to-mid 2000's. They were installed in many nightclubs and high-end residential homes. The products were typically controlled by one or more wall-mounted keypads in each zone, which were programmed via Xantech's expensive (and somewhat clumbsy) *Dragon Drop* software which was a combined IDE and proprietary programming language. As wall-mounted keypads fell out-of-favor, and products like SONOS came on the market, these older Xantech products were cast aside despite their superior discreet amplifiers and multi-zone capabilities.
 
 ## So why spend any more ergs on them now?
-Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 ports which, together with a rudimentary communication protocol, could control almost every aspect of the Xantech's functionality. Today, we can reinvigorate these old products by controlling them through a Raspberry Pi (or possibly Arduino) connected to this serial port, using this Python Flask application that can present a web-based interface to any browser-capable mobile device or computer. With Xantech 8-zone amps available on eBay, occassionally for less than even $100, this makes the PyXantech system one of the more affordable options for whole-house audio distribution.
+Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 ports which, together with a rudimentary communication protocol, could control almost every aspect of the Xantech's functionality. Today, we can reinvigorate these old products by controlling them through a Raspberry Pi (or possibly Arduino) connected to this serial port, using this Python Flask application that can present a web-based interface to any browser-capable mobile device or computer. With Xantech 8-zone amps available on eBay, occassionally for less than even $100, this makes the PyXantech system one of the more affordable options for whole-house audio distribution. Plus I just thought it would be fun to see what I could do.
 
 ## Features:
 - Web-based, mobile-responsive controller interface
@@ -175,6 +176,13 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
     - if the type is set to "streaming", include the URL of the web-based interface. This can be another device on your network (like another Raspberry Pi running PianoBar/PatioBar for Pandora stations, or headless PlexAmp for your Plex audio media - see more below)
 - save to config.json file with any changes, and relaunch the app
 
+- For reference, here is my current setup:
+  - I have three dedicated Raspberry Pi 3B's
+    - 1 Pi running PyXantech to control the Xantech amp
+    - 1 Pi - with a PiFi Hi-Res DAC hat - running PianoBar/PatioBar to play my Pandora stations
+    - 1 Pi - with a PiFi Hi-Res DAC hat - running a headless install of PlexAmp to play the music in my local Plex music library, as well as the other streaming radio stations Plex provides
+   
+![My current setup](layout-2023.png)
 
 ## Testing
 Included with the PyXantech project is a Xantech serial simulator. This allows the project to run (test) even if the Xantech amplifier is not connected (even on non-Pi computers)
