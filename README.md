@@ -194,7 +194,8 @@ to
 ```
   ACTIVE_SERIAL=False
 ```
-- configure source and zones, and run app as above
+
+Also included is a small testing app - *xantech_test.py*, which simply sends vanilla commands to the Xantech amplifier and prints out any responses. This may be helpful to run early on during your setup to ensure your Pi is communicating properly with the Xantech amp.
     
     
 
