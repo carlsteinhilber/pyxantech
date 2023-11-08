@@ -1,5 +1,5 @@
 # pyxantech
-###UPDATE 2023-10-25: now migrated to Python 3
+##UPDATE 2023-10-25: now migrated to Python 3
 
 A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
 
@@ -175,6 +175,13 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
     - if the type is set to "streaming", include the URL of the web-based interface. This can be another device on your network (like another Raspberry Pi running PianoBar/PatioBar for Pandora stations, or headless PlexAmp for your Plex audio media - see more below)
 - save to config.json file with any changes, and relaunch the app
 
+- For reference, here is my current setup:
+  - I have three dedicated Raspberry Pi 3B's
+    - 1 Pi running PyXantech to control the Xantech amp
+    - 1 Pi - with a PiFi Hi-Res DAC hat - running PianoBar/PatioBar to play my Pandora stations
+    - 1 Pi - with a PiFi Hi-Res DAC hat - running a headless install of PlexAmp to play the music in my local Plex music library, as well as the other streaming radio stations Plex provides
+   
+![My current setup](https://myoctocat.com/assets/images/base-octocat.svg)
 
 ## Testing
 Included with the PyXantech project is a Xantech serial simulator. This allows the project to run (test) even if the Xantech amplifier is not connected (even on non-Pi computers)
