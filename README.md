@@ -1,6 +1,9 @@
+<img align="right" width="330" src="interface-2023.png">
+
 # pyxantech
 
 ### UPDATE 2023-10-25: now migrated to Python 3
+
 
 A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
 
@@ -179,8 +182,9 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - For reference, here is my current setup:
   - I have three dedicated Raspberry Pi 3B's
     - 1 Pi running PyXantech to control the Xantech amp
-    - 1 Pi - with a PiFi Hi-Res DAC hat - running PianoBar/PatioBar to play my Pandora stations
-    - 1 Pi - with a PiFi Hi-Res DAC hat - running a headless install of PlexAmp to play the music in my local Plex music library, as well as the other streaming radio stations Plex provides
+    - 1 Pi - with a PiFi Hi-Res DAC hat - running PianoBar/PatioBar to play my Pandora stations (this page gives you a step-by-step guide to setting up PatioBar: https://thisdavej.com/creating-a-raspberry-pi-pandora-player-with-remote-web-control/)
+    - 1 Pi - with a PiFi Hi-Res DAC hat - running a headless install of PlexAmp to play the music in my local Plex music library, as well as the other streaming radio stations Plex provides (this page gives you a great step-by-step guide to setting up PlexAmp on your Raspberry Pi: https://howtohifi.com/install-headless-plexamp-endpoint-home-network-raspberry-pi/)
+  - Each Pi has a dedicated IP address, that I have added to the config.json for PyXantech, so I only have to go to the PyXantech interface to control everything
    
 ![My current setup](layout-2023.png)
 
