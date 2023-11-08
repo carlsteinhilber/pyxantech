@@ -1,0 +1,84 @@
+$max-tab-count: 5;
+$tab-wrap-border-radius: 6px;
+.tab-wrap {
+  background-color: #fff;
+  // border-radius: $tab-wrap-border-radius;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0 0 40px 0px;
+  max-width: 100%;
+  position: relative;
+  top:-20px;
+  transition: 0.3s box-shadow ease;
+  &:hover {
+    box-shadow: 0 12px 23px rgba(0, 0, 0, 0.23), 0 10px 10px rgba(0, 0, 0, 0.19);
+  }
+}
+
+.tab {
+  display: none;
+  @for $i from 1 through $max-tab-count {
+    &:checked:nth-of-type(#{$i}) ~ .tab__content:nth-of-type(#{$i}) {
+      opacity: 1;
+      position: relative;
+      text-shadow: 0 0 0;
+      top: 0;
+      transition: 0.5s opacity ease-in, 0.8s transform ease;
+      transform: translateY(0px);
+      z-index: 100;
+    }
+  }
+  &:first-of-type:not(:last-of-type) + label {
+    border-bottom-right-radius: 0;
+    border-top-right-radius: 0;
+  }
+  &:not(:first-of-type):not(:last-of-type) + label {
+    border-radius: 0;
+  }
+  &:last-of-type:not(:first-of-type) + label {
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+  }
+  &:checked + label {
+    background-color: #fff;
+    box-shadow: 0 -1px 0 #fff inset;
+    cursor: default;
+    &:hover {
+      // background-color: hsl(195, 85%, 41%);
+      box-shadow: 0 -1px 0 #fff inset;
+    }
+  }
+  + label {
+    background-color: hsl(205, 14%, 78%);
+    border-radius: $tab-wrap-border-radius $tab-wrap-border-radius 0 0;
+    box-shadow: 0 -1px 0 #eee inset;
+    box-sizing: border-box;
+    color: #333;
+    cursor: pointer;
+    display: block;
+    flex-grow: 3;
+    height: 50px;
+    padding: 15px;
+    text-align: center;
+    text-decoration: none;
+    user-select: none;
+    transition: 0.3s background-color ease, 0.3s box-shadow ease;
+    &:hover {
+      // background-color: hsl(195, 85%, 41%);
+      box-shadow: 0 1px 0 #f4f4f4 inset;
+    }
+  }
+  &__content {
+    background-color: transparent;
+    border-radius: $tab-wrap-border-radius;
+    left: 0;
+    opacity: 0;
+    padding: 0;
+    position: absolute;
+    transform: translateY(-3px);
+    width: 100%;
+    z-index: -1;
+  }
+}

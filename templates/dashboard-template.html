@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<!--
+    PROJECT: PyXantech
+    A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
+    by ProfessorC  (professorc@gmail.com)
+    https://github.com/grandexperiments/pyxantech
+    FILE: dashboard-template.html - HTML interface
+
+
+    v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
+    v.2.0 - Python 3/Pico release  2023/10/25 - GNU General Public License (GPL 2.0)
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Our House</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
+        integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+
+
+    <link rel="stylesheet" href="{{ url_for('static',filename='styles/main.css') }}" />
+
+    
+    <script>
+        var namespace = '/pyxantech';
+
+        var activeZones = [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ];
+        var processingZones = [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ];
+
+    </script>
+
+</head>
+
+<body>
+
+    <main class="container-fluid">  
+        <header>
+           <button type="button" class="btn btn-lg btn-primary btn-blue master-power-button">ALL OFF</button>
+          <h1>Music Control</h1>
+          <!--- div class="col-xs-6" style="padding-top:10px;">
+            <button type="button" class="btn btn-lg btn-primary btn-blue master-power-button">ALL OFF</button>
+          </div --->
+        </header> 
+        <br clear="all" />
+        <div class="tab-wrap main-wrap">
+            {% set streamcount = namespace(value=2) %}
+            {% if streaming|length > 0 %}
+                <!-- active tab on page load gets checked attribute -->
+                <input type="radio" id="tab1" name="tabGroup1" class="tab" checked>
+                <label for="tab1">Speakers</label>
+                
+                {% for streaminginfo in streaming %}        
+                <input type="radio" id="tab{{ streamcount.value }}" name="tabGroup1" class="tab">
+                <label for="tab{{ streamcount.value }}">{{ streaminginfo.name }}</label>
+                {% set streamcount.value = streamcount.value + 1 %}
+                {% endfor %}
+
+            {% endif %}
+            <div class="tab__content tab-content-speakers">
+                {% set rowcount = 1 %}
+                {% for zoneinfo in zones %}
+                    {% if zoneinfo.enabled %}
+                    <script>
+                        processingZones[{{ zoneinfo.zone }}] = true;
+                        activeZones[{{ zoneinfo.zone }}] = true;
+                    </script>
+                
+          <article class="zone zone-{{ zoneinfo.zone }}">
+            <header><h4>{{ zoneinfo.name }}</h4></header>
+    
+            <div class="parent">
+                <div class="layout-col layout-col-1"><label>&nbsp;<button id="powerButton{{ zoneinfo.zone }}" class="col-content power-button power-button-{{ zoneinfo.zone }}" data-sendSocketEvent=true data-zone="{{ zoneinfo.zone }}"><i class="fa fa-power-off" style="font-size:1em !important;" aria-hidden="true"></i></button></label></div>
+                <div class="layout-col layout-col-2"><label for="sourceSelect{{ zoneinfo.zone }}">Source:
+                    <select id="sourceSelect{{ zoneinfo.zone }}" class="col-content source-select source-select-{{ zoneinfo.zone }}" data-sendSocketEvent=true data-zone="{{ zoneinfo.zone }}">
+                        <option value="" disabled selected>Select a source</option>
+                        {% for sourceinfo in sources %}
+                        {% if sourceinfo.enabled %}
+                            {% set sourceUrl = "unknown" %}
+                            {% if sourceinfo.url|length >0 %}
+                                {% set sourceUrl = sourceinfo.url %}
+                            {% endif %}
+                            <option value="{{sourceinfo.source}}" data-type="{{sourceinfo.type}}" data-url="{{sourceUrl}}">{{sourceinfo.name}}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select></label>
+                </div>
+                <div class="layout-col layout-col-3"><input id="volumeDisplay{{ zoneinfo.zone }}" class="col-content volume-display volume-display-{{ zoneinfo.zone }}" value="15" data-zone="{{ zoneinfo.zone }}" /></div>
+                <div class="layout-col layout-col-4"><label for="volumeSlider{{ zoneinfo.zone }}" class="col-content">Volume:
+                    <input id="volumeSlider{{ zoneinfo.zone }}" class="col-content volume-slider volume-slider-{{ zoneinfo.zone }}" type="range" min="0" max="30" step="1" value="15" id="range" name="range" data-sendSocketEvent=true data-zone="{{ zoneinfo.zone }}">
+                    </label></div>
+                </div>        
+    
+          </article>
+                {% set rowcount = rowcount + 1 %}
+                {% endif %}
+            {% endfor %}
+
+        </div><!--- tab_content for speakers --->
+
+        {% set streamcount = namespace(value=2) %}
+        {% if streaming|length > 0 %}
+            {% for streaminginfo in streaming %}        
+            <div class="tab__content">
+                <h4>{{ streaminginfo.name }}</h4>
+                &gt;iframe src="{{ streaminginfo.url }}" width="100%" height="700px" /&lt;
+            </div><!--- tab_content for {{ streaminginfo.name }} --->
+            {% set streamcount.value = streamcount.value + 1 %}
+            {% endfor %}
+
+        {% endif %}
+
+    
+    
+        </main>
+
+        <div class="loading-curtain" style="z-index:8888;"></div>
+        <div class="loading-wrapper" style="z-index:9999;">
+            <div class="loading-inner">
+                <span>Loading...</span>
+            </div>
+        </div>
+    
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+   integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js" integrity="sha512-zoJXRvW2gC8Z0Xo3lBbao5+AS3g6YWr5ztKqaicua11xHo+AvE1b0lT9ODgrHTmNUxeCw0Ry4BGRYZfXu70weg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script src="{{ url_for('static',filename='js/main.js') }}" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+</html>
