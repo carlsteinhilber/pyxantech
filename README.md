@@ -181,7 +181,7 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
     - 1 Pi - with a PiFi Hi-Res DAC hat - running PianoBar/PatioBar to play my Pandora stations
     - 1 Pi - with a PiFi Hi-Res DAC hat - running a headless install of PlexAmp to play the music in my local Plex music library, as well as the other streaming radio stations Plex provides
    
-![My current setup](https://myoctocat.com/assets/images/base-octocat.svg)
+![My current setup](layout-2023.png)
 
 ## Testing
 Included with the PyXantech project is a Xantech serial simulator. This allows the project to run (test) even if the Xantech amplifier is not connected (even on non-Pi computers)
