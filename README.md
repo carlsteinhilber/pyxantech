@@ -1,4 +1,4 @@
-<img align="right" width="300" src="interface-2023.png">
+<img align="right" width="400" src="interface-2023.png">
 
 # pyxantech
 
