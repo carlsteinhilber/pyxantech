@@ -1,4 +1,5 @@
-<img align="right" width="200" src="interface-2023.png">
+<img align="right" width="300" src="interface-2023.png">
+
 # pyxantech
 
 ### UPDATE 2023-10-25: now migrated to Python 3
