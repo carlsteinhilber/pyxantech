@@ -5,10 +5,22 @@
 # FILE: "How to run.txt" - suggested running instructions
 '''
     v.1.0 - Inital release  2019/03/25 - GNU General Public License (GPL 2.0)
+    v.2.0 - Python 3/Pico release  2023/10/25 - GNU General Public License (GPL 2.0)
 '''
 
+RECOMMENDED
+
+Copy the xantech.service file from the root of the project to the /lib/systemd/system/ directory of the Pi
+
+Then enable it as a service
+ >sudo systemctl daemon-reload
+ >sudo systemctl enable xantech
+ >sudo systemctl start xantech
+
+Or, you can run it manually from the command line or SSH terminal
+
 Use
- >python app.py &
+ >python app.py
 
 instead of
  >flask run
