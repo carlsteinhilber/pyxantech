@@ -1,7 +1,8 @@
+<img align="right" width="200" src="interface-2023.png">
 # pyxantech
 
 ### UPDATE 2023-10-25: now migrated to Python 3
-<img align="right" width="100" height="100" src="interface-2023.png">
+
 
 A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
 
