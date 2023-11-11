@@ -106,6 +106,10 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
   pi@xantechpi:~ pip install pyserial
   Successfully installed pyserial-3.5
 ```
+- Make sure the .local/bin directory is in the system PATH
+```
+  pi@xantechpi:~ export PATH="$HOME/.local/bin:$PATH"
+```
 - Install this project (either via GIT on the Pi, or download the ZIP and get it onto the Pi some other way)
 - Edit config.json (see *Configuration* below)
   - this configuration file now combines the information for both the zones and the sources for the Xantech  
