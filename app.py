@@ -22,7 +22,7 @@
 '''
 
 ## GLOBAL SETTINGS (adjust as necessary)
-ACTIVE_SERIAL=True  # is actual Xantech connected to serial port (if 'False', use simulator)
+ACTIVE_SERIAL=False  # is actual Xantech connected to serial port (if 'False', use simulator)
 ACTIVE_DEBUG=False  # is debugger active
 
 # The USB port to use on the Raspberry Pi. This can usually be left as '/dev/ttyUSB0',
@@ -63,6 +63,8 @@ if(ACTIVE_SERIAL):
 else:
     # use Xantech simulator as fake serial
     print("Using serial port simulator")
+    # use a spare serial port as a stub for the simulator
+    ACTIVE_USBPORT="/dev/tty0"
     import xantech_sim as serial
 from subprocess import call
 import sys
@@ -171,10 +173,12 @@ def send_to_device(message):
     try:
         serial_port.flushInput()
         serial_port.flushOutput()
-        serial_port.write(message.encode())
+        # serial_port.write(message)
+        serial_port.write(message.encode('utf-8'))
         running=True;
         while running:
-            response_character=str(serial_port.read(1).decode())
+            response_character=str(serial_port.read(1).decode('utf-8'))
+            # response_character=str(serial_port.read(1))
             if response_character != '!' and response_character != '?' and response_character != '+':
                 response_string+=response_character
             if (response_character == '+') or (response_string.strip()=='ERROR') or (response_string.strip()=='OK'): 
