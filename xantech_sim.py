@@ -182,6 +182,7 @@ def parseIncomingCommand(cmd):
             result="!OK+"
 
     elif(cmdMode=="?"):
+        print('command is a query!')
         # we could combine everything into 3 conditions, but I'm keeping them
         # separated out for readibility
         if(cmdAction=="PR"):
@@ -242,7 +243,7 @@ def parseIncomingCommand(cmd):
             result="!ERROR+"
 
 
-
+    print("parseIncomingCommand result:")
     print(result)
     return result
 
@@ -251,20 +252,31 @@ def parseIncomingCommand(cmd):
 # a Serial class emulator
 class Serial:
 
+
     ## init(): the constructor.  Many of the arguments have default values
     # and can be skipped when calling the constructor.
-    def __init__( self, port='COM1', baudrate = 19200, timeout=1,
-                  bytesize = 8, parity = 'N', stopbits = 1, xonxoff=0,
-                  rtscts = 0):
-        self.name     = port
-        self.port     = port
-        self.timeout  = timeout
-        self.parity   = parity
-        self.baudrate = baudrate
-        self.bytesize = bytesize
-        self.stopbits = stopbits
-        self.xonxoff  = xonxoff
-        self.rtscts   = rtscts
+    def __init__( self, 
+                  port='COM1', 
+                  baudrate = 19200, 
+                  bytesize = 8, 
+                  parity = 'N', 
+                  stopbits = 1, 
+                  timeout=None, 
+                  xonxoff=False,
+                  rtscts=False,
+                  write_timeout=None,
+                  dsrdtr=False):
+        self.name               = port
+        self.port               = port
+        self.baudrate           = baudrate
+        self.bytesize           = bytesize
+        self.parity             = parity
+        self.stopbits           = stopbits
+        self.timeout            = timeout
+        self.xonxoff            = xonxoff
+        self.rtscts             = rtscts
+        self.write_timeout      = write_timeout
+        self.dsrdtr             = dsrdtr
         self._isOpen  = True
         self._receivedData = ""
         self._data = "READY\n"
@@ -286,8 +298,9 @@ class Serial:
 
     ## write()
     # writes a string of characters to the Xantech
-    def write( self, string ):
-        strReceived = str(string.decode())
+    def write( self, inStr ):
+        # strReceived = str(str(inStr).decode())
+        strReceived = str(inStr.decode('utf-8'))
         print( 'Xantech received: "' + strReceived + '"' )
         self._receivedData = strReceived
         # parse out string into a Xantech command
@@ -298,9 +311,14 @@ class Serial:
     # are read from the string _data and returned to the caller.
     def read( self, n=1 ):
         s = self._data[0:n]
+        b = bytearray()
+        b.extend(s.encode('utf-8'))
+
+        # s = self._data[0:n]
         self._data = self._data[n:]
         #print( "read: now self._data = ", self._data )
-        return s
+        return b
+        # return s
 
     ## readline()
     # reads characters from the fake Xantech until a \n is found.
