@@ -51,23 +51,21 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - SSH into the Pi using a utility such as PuTTY connecting to the IP address you determined above
 - Expand the Pi's filesystem using the Raspberry Pi Configurator utility
 ```
-  sudo raspi-config
+  pi@xantechpi:~ $ sudo raspi-config
 ```
   - the under *Advanced*, choose *Expand File System*
 - Reboot the Pi
 ```
-  sudo reboot
+  pi@xantechpi:~ $ sudo reboot
 ```
 - Update all the libraries to the latest
 ```
-  sudo apt-get update && sudo apt-get upgrade
+  pi@xantechpi:~ $ sudo apt-get update && sudo apt-get upgrade
 ```
 - Reboot the Pi again
 - Python 3.9+ should be installed by default in Raspbian. 
 ```
-  python -V
-```
-```
+  pi@xantechpi:~ $ python -V
   Python 3.11.2
 ```
   - should return "Python 3.9" or greater
