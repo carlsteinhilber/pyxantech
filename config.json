@@ -10,7 +10,7 @@
         {"zone":8, "name":"", "enabled": false, "default_volumne": 5  }
     ],
     "sources": [
-        {"source":1, "name":"Pandora", "enabled": true, "type": "streaming", "url":"http://192.168.1.31:3000/" },
+        {"source":1, "name":"Pandora", "enabled": true, "type": "streaming", "url":"http://192.168.1.31:5000/" },
         {"source":2, "name":"TiVO", "enabled": true, "type": "device" },
         {"source":3, "name":"Apple TV", "enabled": true, "type": "device" },
         {"source":4, "name":"CD Player", "enabled": true, "type": "device" },
