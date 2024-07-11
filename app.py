@@ -22,8 +22,8 @@
 '''
 
 ## GLOBAL SETTINGS (adjust as necessary)
-ACTIVE_SERIAL=False  # is actual Xantech connected to serial port (if 'False', use simulator)
-ACTIVE_DEBUG=False  # is debugger active
+ACTIVE_SERIAL=True  # is actual Xantech connected to serial port (if 'False', use simulator)
+ACTIVE_DEBUG=True  # is debugger active
 
 # The USB port to use on the Raspberry Pi. This can usually be left as '/dev/ttyUSB0',
 # but if you have multiple devices connected to your Pi, you may need to adjust this
