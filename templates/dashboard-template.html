@@ -130,7 +130,7 @@
         {% if streaming|length > 0 %}
             {% for streaminginfo in streaming %}        
             <div class="tab__content">
-                <h4>{{ streaminginfo.name }}</h4>
+                <!--- h4>{{ streaminginfo.name }}</h4 --->
                 <iframe src="{{ streaminginfo.url }}" width="100%" height="700px"></iframe>
             </div><!--- tab_content for {{ streaminginfo.name }} --->
             {% set streamcount.value = streamcount.value + 1 %}
