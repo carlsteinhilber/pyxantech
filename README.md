@@ -51,59 +51,60 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - SSH into the Pi using a utility such as PuTTY connecting to the IP address you determined above
 - Expand the Pi's filesystem using the Raspberry Pi Configurator utility
 ```
-  pi@xantechpi:~ sudo raspi-config
+  sudo raspi-config
 ```
   - the under *Advanced*, choose *Expand File System*
 - Reboot the Pi
 ```
-  pi@xantechpi:~ sudo reboot
+  sudo reboot
 ```
 - Update all the libraries to the latest
 ```
-  pi@xantechpi:~ sudo apt-get update
-  pi@xantechpi:~ sudo apt-get upgrade
+  sudo apt-get update && sudo apt-get upgrade
 ```
 - Reboot the Pi again
 - Python 3.9+ should be installed by default in Raspbian. 
 ```
-  pi@xantechpi:~ python -V
+  python -V
+```
+```
   Python 3.11.2
 ```
   - should return "Python 3.9" or greater
   - if not, you will need to install Python 3 (see online tutorials for "raspberry pi install python 3")
 - Python3 PIP may need to be installed
 ```
-  pi@xantechpi:~ pip -V
+  pi@xantechpi:~ $ pip -V
   bash: pip: command not found
 ```
   - if the system can not find PIP, or the version reported is not 3.x or greater, install Python3 PIP
 ```
-  pi@xantechpi:~ sudo apt-get install python3-pip
+  pi@xantechpi:~ $ sudo apt-get install python3-pip
 ```
 - PIP may also need to be configured
 ```
-  pi@xantechpi:~ pip install flask
+  pi@xantechpi:~ $ pip install flask
   error: externally-managed-environment
 ```
   - if you choose to create a virtual environment (venv) on your Pi for PyXantech, here's where you would do that
   - I choose to run PyXantech outside of a virtual environment on the Pi, because I feel a venv would be overkill seeing that my Pi's sole purpose will only ever be controlling my Xantech amp. But as such, I need to tell PIP that I will not be using a venv
 ```
-  pi@xantechpi:~ sudo mv /usr/lib/python3.11/EXTERNALLY-MANAGED /usr/lib/python3.11/EXTERNALLY-MANAGED.old
+  pi@xantechpi:~ $ sudo mv /usr/lib/python3.11/EXTERNALLY-MANAGED /usr/lib/python3.11/EXTERNALLY-MANAGED.old
 ```
   - replacing the Python version with whatever version is currently installed
 - Now install dependencies using the working PIP
 ```
-  pi@xantechpi:~ pip install flask
+  pi@xantechpi:~ $ pip install flask
   Successfully installed Jinja2-3.1.2 MarkupSafe-2.1.3 Werkzeug-3.0.0 blinker-1.6.3 click-8.1.7 flask-3.0.0 itsdangerous-2.1.2
 
-  pi@xantechpi:~ pip install flask-socketio
+  pi@xantechpi:~ $ pip install flask-socketio
   Successfully installed bidict-0.22.1 flask-socketio-5.3.6 h11-0.14.0 python-engineio-4.8.0 python-socketio-5.10.0 simple-websocket-1.0.0 wsproto-1.2.0
 
   ***(installing eventlet is optional, but recommended)***
-  pi@xantechpi:~ pip install eventlet
+  pi@xantechpi:~ $ pip install eventlet
   Successfully installed dnspython-2.4.2 eventlet-0.33.3 greenlet-3.0.0
 
-  pi@xantechpi:~ pip install pyserial
+  pi@xantechpi:~ $ pip install pyserial
   Successfully installed pyserial-3.5
 ```
 - Make sure the .local/bin directory is in the system PATH
@@ -116,8 +117,8 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - Run the project
   - The project uses socketio.run(), so the typical `flask run` will likely cause issues. Use instead:
 ```
-  pi@xantechpi:~ cd xantech
-  pi@xantechpi:~ python app.py
+  pi@xantechpi:~ $ cd pyxantech
+  pi@xantechpi:~/pyxantech $ python app.py
 ```
 - Open a web browser on a device on the same network as your Pi, and point it to port 5000 on the IP address of the Pi (for example: http://192.168.1.100:5000)
   - If you wish to control your Xantech from a device on *any* network (ie - your mobile data plan, or external computer), you'll need to set up dynamic DNS, firewall rules, etc... I'll leave that up to you.
@@ -126,18 +127,18 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 
 ## Running as a service
 - You're likely to want to run PyXantech as a system service so that it will launch as soon as the Pi is booted, will run unattended, and will even restart if it encounters issues
-  - Included in the project is a .service file all set to use, assuming you installed the project to the */home/pi/xantech* directory on the Pi (default installation, from above)
+  - Included in the project is a .service file all set to use, assuming you installed the project to the */home/pi/pyxantech* directory on the Pi (default installation, from above)
   - Just copy the .service file to the systemd directory, and register it as a service
 ```
-  pi@xantechpi:~ sudo cp xantech.service /lib/systemd/system/
-  pi@xantechpi:~ sudo systemctl daemon-reload
-  pi@xantechpi:~ sudo systemctl enable xantech
-  pi@xantechpi:~ sudo systemctl start xantech
+  pi@xantechpi:~/pyxantech $ sudo cp xantech.service /lib/systemd/system/
+  pi@xantechpi:~/pyxantech $ sudo systemctl daemon-reload
+  pi@xantechpi:~/pyxantech $ sudo systemctl enable xantech
+  pi@xantechpi:~/pyxantech $ sudo systemctl start xantech
 ```
 - You should now be able to point a web browser to the Pi's IP address, as above, and find the PyXantech interface (http://<*your pi's IP address*>:5000
 - Test that it launches on system reboot
 ```
-  pi@xantechpi:~ sudo reboot
+  pi@xantechpi:~ $ sudo reboot
 ```
   - wait a few minutes for the system to fully reboot, then try your web browser again
 - Enjoy
