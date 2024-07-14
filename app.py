@@ -212,7 +212,8 @@ def get_all_zone_status():
                 {'zone':z["zone"],
                 'command':'?'+str(z["zone"])+'ZS+',
                 'status':zone_status},
-                broadcast=True)
+                broadcast=True,
+                namespace="/pyxantech")
 
 
 # goodbye() - register an exit event
@@ -387,6 +388,49 @@ def pi_reboot():
         debug_log("There was a problem restarting down the system. Restarting app instead.")
         app_restart()
 
+@app.route('/command')
+def pi_command():
+    print('command!')
+    # /command?z=1&pr=1&ss=3&vo=20
+    alloff = request.args.get('ao')
+    zone = request.args.get('z')
+    power = request.args.get('pr')
+    source = request.args.get('ss')
+    volume = request.args.get('vo')
+
+    if(alloff is not None):
+        alloffstatus = send_to_device("!AO+")
+        get_all_zone_status()
+        return "Successful"
+
+    if(zone is not None and (zone in ['1', '2', '3', '4', '5', '6', '7', '8'])):
+        status=get_zone_status(zone)
+
+        # if the power value is valid, set the new power value
+        if(power is not None and (power == '0' or power == '1') and power != status["power"]):
+            powercommand = "!"+zone+"PR"+power+"+"
+            powerstatus = send_to_device(powercommand)
+        # if the source value is valid, set the new source value
+        if(source is not None and (source in ['1', '2', '3', '4', '5', '6', '7', '8']) and source != status["source"]):
+            sourcecommand = "!"+zone+"SS"+source+"+"
+            sourcestatus = send_to_device(sourcecommand)
+        # if the volume value is valid, set the new volumne value
+        if(volume is not None and volume.isnumeric() and (0 <= int(volume) <=49) and volume != status["volume"]):
+            volumecommand = "!"+zone+"VO"+volume+"+"
+            volumestatus = send_to_device(volumecommand)
+
+        # update the zone status for all other connected clients
+        zone_status = get_zone_status(zone)
+        emit('set_status',
+            {'zone':zone,
+            'command':'?'+str(zone)+'ZS+',
+            'status':zone_status},
+            broadcast=True,
+            namespace='/pyxantech')
+        
+        return "Success"
+    
+    return "Failure"
 
 # index() - main route to display default UI page
 @app.route('/')
