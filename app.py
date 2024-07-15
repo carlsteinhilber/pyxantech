@@ -127,7 +127,7 @@ connected_clients={}
 try:
     serial_port=serial.Serial(port=ACTIVE_USBPORT, baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=None, xonxoff=False, rtscts=False, write_timeout=None, dsrdtr=False )
 except:
-    print("The serial port "+ACTIVE_USBPORT+" could not be opened. Unfortunately, this is a fatal error. Ensure the proper serial port is specified in the variable ACTIVE_USBPORT, and try rebooting the pi. You may also try either setting ACTIVE_SERIAL to False to use the Xantech simulator, or running the xantech_test.py to determine the proper serial port for your system.")
+    print("The serial port "+ACTIVE_USBPORT+" could not be opened. Unfortunately, this is a fatal error. Ensure the proper serial port is specified in the config.json file, and try rebooting the pi. You may also try either setting usesimulator to true in config.json to use the Xantech simulator, or running the xantech_test.py to determine the proper serial port for your system.")
     sys.exit(0)
 
     
