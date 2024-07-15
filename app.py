@@ -7,6 +7,7 @@
 '''
     v.1.0 - Initial release  2019/03/25 - GNU General Public License (GPL 2.0)
     v.2.0 - Python 3/Pico release  2023/10/25 - GNU General Public License (GPL 2.0)
+    v.2.1 - Added URL /command functionality, and updated config.json to include system settings
 '''
 
 '''
@@ -21,14 +22,60 @@
     PyXantech will automatically add a tab at the top of it's interface to control PianoBar.
 '''
 
+# moved most of the configurable system settings to the config.json file to avoid having to edit this file
+
+# BASE LIBRARIES
+import io
+import json
+import os
+from os.path import dirname, abspath, join
+
+# load and store zone and source names from config json
+xantech_config = {
+    "system":{
+        "serialport":"ttyUSB0",
+        "usesimulator": False,
+        "debugging": False
+    },
+    "zones" : [],
+    "sources" : []
+}
+
+config_filename = 'config.json'
+homepath = dirname(abspath(__file__))
+full_filename=join(homepath,config_filename)
+f = open(full_filename)
+xantech_config = json.load(f)
+f.close()
+
+# bulletproof for new style config file
+if not "system" in xantech_config:
+    print("PLEASE UPDATE YOUR config.json FILE!")
+    xantech_config["system"] = {
+        "serialport":"ttyUSB0",
+        "usesimulator": False,
+        "debugging": False
+    }
+if not "serialport" in xantech_config["system"]:
+    print("PLEASE UPDATE YOUR config.json FILE! serialport IS NOT DEFINED!")
+    xantech_config["system"]["serialport"] = "ttyUSB0"
+
+if not "usesimulator" in xantech_config["system"]:
+    print("PLEASE UPDATE YOUR config.json FILE! usesimulator IS NOT DEFINED!")
+    xantech_config["system"]["usesimulator"] = False
+
+if not "debugging" in xantech_config["system"]:
+    print("PLEASE UPDATE YOUR config.json FILE! debugging IS NOT DEFINED!")
+    xantech_config["system"]["debugging"] = False
+
 ## GLOBAL SETTINGS (adjust as necessary)
-ACTIVE_SERIAL=False  # is actual Xantech connected to serial port (if 'False', use simulator)
-ACTIVE_DEBUG=False  # is debugger active
+ACTIVE_SERIAL=not xantech_config["system"]["usesimulator"]  # is actual Xantech connected to serial port (if 'False', use simulator)
+ACTIVE_DEBUG=xantech_config["system"]["debugging"]  # is debugger active
 
 # The USB port to use on the Raspberry Pi. This can usually be left as '/dev/ttyUSB0',
 # but if you have multiple devices connected to your Pi, you may need to adjust this
 # value. See Raspberry Pi documentation on specifying USB ports.
-ACTIVE_USBPORT="/dev/ttyUSB0"
+ACTIVE_USBPORT="/dev/"+xantech_config["system"]["serialport"]
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -40,11 +87,11 @@ XANTECH_SOURCES = 8
 XANTECH_ZONES = 8
 
 
+
 # ****   HERE BE DRAGONS!!   ****
 # **** NO OTHER EDITS NEEDED ****
 
-
-# LIBRARIES (in alphabetical order)
+# ADDITIONAL LIBRARIES (in alphabetical order)
 import atexit
 import eventlet
 eventlet.monkey_patch()
@@ -52,10 +99,7 @@ eventlet.monkey_patch()
 # import flask_socketio
 from flask import Flask, render_template, session, request
 from flask_socketio import SocketIO, emit, disconnect
-import io
-import json
-import os
-from os.path import dirname, abspath, join
+
 if(ACTIVE_SERIAL):
     print("Using serial port: "+ACTIVE_USBPORT)
     import serial
@@ -64,7 +108,7 @@ else:
     # use Xantech simulator as fake serial
     print("Using serial port simulator")
     # use a spare serial port as a stub for the simulator
-    ACTIVE_USBPORT="/dev/tty0"
+    # ACTIVE_USBPORT="/dev/tty0"
     import xantech_sim as serial
 from subprocess import call
 import sys
@@ -80,21 +124,13 @@ socketio = SocketIO(app, async_mode=SOCKET_ASYNC_MODE, exclusive=True)
 # keep track of connected clients (TODO: auto disconnect clients after inactivity?)
 connected_clients={}
 
-serial_port=serial.Serial(port=ACTIVE_USBPORT, baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=None, xonxoff=False, rtscts=False, write_timeout=None, dsrdtr=False )
+try:
+    serial_port=serial.Serial(port=ACTIVE_USBPORT, baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=None, xonxoff=False, rtscts=False, write_timeout=None, dsrdtr=False )
+except:
+    print("The serial port "+ACTIVE_USBPORT+" could not be opened. Unfortunately, this is a fatal error. Ensure the proper serial port is specified in the variable ACTIVE_USBPORT, and try rebooting the pi. You may also try either setting ACTIVE_SERIAL to False to use the Xantech simulator, or running the xantech_test.py to determine the proper serial port for your system.")
+    sys.exit(0)
 
-
-# load and store zone and source names from config json
-xantech_config = {
-    "zones" : [],
-    "sources" : []
-}
-
-config_filename = 'config.json'
-homepath = dirname(abspath(__file__))
-full_filename=join(homepath,config_filename)
-f = open(full_filename)
-xantech_config = json.load(f)
-f.close()
+    
 
 
 # zone status ('?1ZD+')
