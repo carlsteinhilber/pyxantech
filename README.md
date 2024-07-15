@@ -144,10 +144,10 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 ## NEW (2024-07-15): Sending command on URL
 The PyXantech Pi can now receive commands via the URL, useful for implementing IFTTT handlers or other external processes capable of POSTing data to the Pi.
 
-The base URL is "http://<the IP or URI of the PyXantech Pi>/command?<command parameters>"
+The base URL is "http://\<the IP or URI of the PyXantech Pi\>/command?\<command parameters\>"
 
 Available command parameters:
-- [Required] "z" (or "zone"): value is either the zone number or zone name of an enabled zone
+- \[Required\] "z" (or "zone"): value is either the zone number or zone name of an enabled zone
 - [Optional] "pr" (or "power"): numeric value of either 0 (power off) or 1 (power on)
 - [Optional] "vo" (or "volume"): a mumeric value between 0 (min volume) and 49 (max volume)
 - [Optional] "ss" (or "source"): value is either the source number or source name of an enabled source
