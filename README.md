@@ -19,6 +19,7 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - Status syncs across all devices via web sockets
 - Easy to configure zone and source names
 - Control on/off, source and volume of each zone
+- Have the app interpret URL parameters to send commands via IFTT, Home Automation or other POST utility
 - Xantech simulator included for testing*
 
 (* see *Testing* below for more information)
