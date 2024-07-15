@@ -4,6 +4,7 @@
 
 ### UPDATE 2023-10-25: now migrated to Python 3
 
+### UPDATE 2024-07-15: new URL command features, and new format for config.json
 
 A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
 
@@ -110,8 +111,13 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
   pi@xantechpi:~ export PATH="$HOME/.local/bin:$PATH"
 ```
 - Install this project into a subdirectory under /home/pi named "pyxantech" (either via GIT on the Pi, or download the ZIP and get it onto the Pi some other way)
+```
+  pi@xantechpi:~ $ sudo apt-get install git
+  pi@xantechpi:~ $ sudo git clone https://github.com/carlsteinhilber/pyxantech.git
+```
 - Edit config.json (see *Configuration* below)
-  - this configuration file now combines the information for both the zones and the sources for the Xantech  
+  - this configuration file combines the information for both the zones and the sources for the Xantech  
+  - as of 2024-07-15 build, it also now includes system settings (*IMPORTANT!* if you are updating an existing installation, be sure to copy and edit the "system" node from the new config.json to your existing config.json file)
 - Run the project
   - The project uses socketio.run(), so the typical `flask run` will likely cause issues. Use instead:
 ```
@@ -141,7 +147,7 @@ Hidden on the back on the Xantech 8-zone amplifiers were seldom-used RS-232 port
   - wait a few minutes for the system to fully reboot, then try your web browser again
 - Enjoy
 
-## NEW (2024-07-15): Sending command on URL
+## *NEW (2024-07-15)*: Sending command on URL
 The PyXantech Pi can now receive commands via the URL, useful for implementing IFTTT handlers or other external processes capable of POSTing data to the Pi.
 
 The base URL is "http://\<the IP or URI of the PyXantech Pi\>/command?\<command parameters\>"
@@ -179,9 +185,14 @@ Will turn all zones off, regardless of configuration
 
 ## Configuration
 - All configuration for the Xantech amp is now handled in a single JSON file (config.json) in the root directory of the project
-- The JSON has two main branches - for Zones and Sources - and looks like this:
+- The JSON has three main branches - for System, Zones and Sources - and looks like this:
 ```
 {
+    "system":{
+        "serialport":"ttyUSB0",
+        "usesimulator": true,
+        "debugging": false
+    },
     "zones": [
         {"zone":1, "name":"Living Room", "enabled": true, "default_volumne": 5 },
         {"zone":2, "name":"", "enabled": false, "default_volumne": 5  },
@@ -205,6 +216,10 @@ Will turn all zones off, regardless of configuration
 }
 ```
 - Editing is relatively straight-forward, though care must be taken to ensure you maintain the formatting
+  - for system (new, as of 2024-07-15)
+    - enter the name of the serial port to use for the connection to the Xantech amplifier (This can, unfortunately, be a little tricky under linux if you're infamiliar, but in general, this will usually be the USB port when using a USB-to-Serial dongle; ex: "ttyUSB0".)
+    - indicate whether you wish to use the xantech simulator (false if you have a physical Xantech amplifier connected and wish to execute actual commands, otherwise true to only use the simulator)
+    - indicate whether you wish to enable debugging (only useful if you are running the pyxantech application from the command line of a SSH terminal connected to the pyxantech Pi)
   - for zones
     - enter a name for each the active zones connected the amp (this can be anything you like)
     - indicate whether the zone is *enabled* (should appear in the PyXantech interface) with a "true" or "false" value

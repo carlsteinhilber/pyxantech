@@ -1,4 +1,9 @@
 {
+    "system":{
+        "serialport":"ttyUSB0",
+        "usesimulator": true,
+        "debugging": false
+    },
     "zones": [
         {"zone":1, "name":"Living Room", "enabled": true, "default_volumne": 5 },
         {"zone":2, "name":"", "enabled": false, "default_volumne": 5  },
@@ -19,6 +24,4 @@
         {"source":7, "name":"", "enabled": false, "type": "device" },
         {"source":8, "name":"", "enabled": false, "type": "device" }
     ]
-
-
 }
