@@ -148,9 +148,9 @@ The base URL is "http://\<the IP or URI of the PyXantech Pi\>/command?\<command 
 
 Available command parameters:
 - \[Required\] "z" (or "zone"): value is either the zone number or zone name of an enabled zone
-- [Optional] "pr" (or "power"): numeric value of either 0 (power off) or 1 (power on)
-- [Optional] "vo" (or "volume"): a mumeric value between 0 (min volume) and 49 (max volume)
-- [Optional] "ss" (or "source"): value is either the source number or source name of an enabled source
+- \[Optional\] "pr" (or "power"): numeric value of either 0 (power off) or 1 (power on)
+- \[Optional\] "vo" (or "volume"): a mumeric value between 0 (min volume) and 49 (max volume)
+- \[Optional\] "ss" (or "source"): value is either the source number or source name of an enabled source
 
 OR
 - [Required] "ao" (or "alloff"): any none zero value will turn all zones off
@@ -160,18 +160,22 @@ Examples
   http://mypiaddress/command?z=Living Room&pr=1&vo=7&ss=Pandora
 ```
 Will turn the "Living Room" zone on, set it's volume to 7, and set it's source to "Pandora", assuming both the zone and source are enabled in config.json (see Confguration below)
+
 ```
   http://mypiaddress/command?zone=3&power=1
 ```
 Will turn on zone 3, assuming it is enabled in config.json (see Confguration below)
+
 ```
   http://mypiaddress/command?z=2&source=Pandora
 ```
 Will set zone 2's source to Pandora, assuming both the zone and source are enabled in config.json (see Confguration below) and the zone is already powered on
+
 ```
   http://mypiaddress/command?ao=1
 ```
 Will turn all zones off, regardless of configuration
+
 
 ## Configuration
 - All configuration for the Xantech amp is now handled in a single JSON file (config.json) in the root directory of the project
