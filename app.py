@@ -80,7 +80,7 @@ ACTIVE_USBPORT="/dev/"+xantech_config["system"]["serialport"]
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
-SOCKET_ASYNC_MODE = None # 'eventlet'
+SOCKET_ASYNC_MODE = "threading" # 'eventlet'
 
 # Xantech device setup
 XANTECH_SOURCES = 8
@@ -93,8 +93,8 @@ XANTECH_ZONES = 8
 
 # ADDITIONAL LIBRARIES (in alphabetical order)
 import atexit
-import eventlet
-eventlet.monkey_patch()
+# import eventlet
+# eventlet.monkey_patch()
 # import flask
 # import flask_socketio
 from flask import Flask, render_template, session, request
