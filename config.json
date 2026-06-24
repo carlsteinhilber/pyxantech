@@ -1,7 +1,7 @@
 {
     "system":{
         "serialport":"ttyUSB0",
-        "usesimulator": false,
+        "usesimulator": true,
         "debugging": false
     },
     "zones": [
