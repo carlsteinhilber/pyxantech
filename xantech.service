@@ -1,14 +1,19 @@
 [Unit]
 Description=Xantech Pi
-After=network-online.target
+After=network.target
 Requires=network-online.target
 
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/pyxantech/
-ExecStart=/usr/bin/python3 /home/pi/pyxantech/app.py
-Restart=on-failure
+WorkingDirectory=/home/pi/pyxantech5/
+ExecStart=/usr/bin/python3 /home/pi/pyxantech5/app.py
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

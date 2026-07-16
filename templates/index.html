@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ appname }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+{% if theme_file %}<link rel="stylesheet" href="{{ url_for('static', filename=theme_file) }}">{% endif %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">{{ appname }}</div>
+  <div class="header-right">
+    <div class="conn-badge" id="conn-badge">
+      <span class="dot"></span>
+      <span id="conn-label">Connecting…</span>
+    </div>
+    <button class="all-off-btn" onclick="allOff()" title="Turn all zones off">
+      ALL OFF
+      <svg viewBox="0 0 24 24"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Global tab bar (built by JS) -->
+<div class="global-tabs" id="global-tabs"></div>
+
+<!-- Tab pages (built by JS) -->
+<div id="tab-pages"></div>
+
+<script>const CFG = {{ config_json | safe }};</script>
+<script src="{{ url_for('static', filename='js/main.js') }}?v={{ js_version }}"></script>
+</body>
+</html>

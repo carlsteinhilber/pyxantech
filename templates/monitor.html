@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyXantech Monitor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0d0d;
+    color: #ccc;
+    font: 13px/1.5 'Courier New', monospace;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    background: #181818;
+    border-bottom: 1px solid #2a2a2a;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header h1 { font-size: 13px; color: #eee; letter-spacing: .05em; flex: 1; }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #555;
+    flex-shrink: 0;
+  }
+  .dot.live { background: #4c4; animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+
+  button {
+    padding: 3px 11px;
+    border: 1px solid #383838;
+    background: #222;
+    color: #aaa;
+    cursor: pointer;
+    border-radius: 3px;
+    font: 12px/1.6 'Courier New', monospace;
+  }
+  button:hover { background: #2d2d2d; color: #eee; }
+  button.active { background: #1a301a; border-color: #3a6a3a; color: #8d8; }
+
+  .count { font-size: 11px; color: #555; min-width: 60px; text-align: right; }
+
+  #log {
+    height: calc(100vh - 41px);
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 68px 72px 1fr;
+    gap: 0 10px;
+    padding: 2px 14px;
+    border-bottom: 1px solid #161616;
+  }
+  .entry:hover { background: #161616; }
+
+  .ts      { color: #484848; font-size: 11px; padding-top: 1px; }
+  .cat     { font-weight: bold; font-size: 11px; text-align: right; padding-top: 1px; white-space: nowrap; }
+  .summary { color: #bbb; white-space: pre-wrap; word-break: break-all; }
+  .detail  {
+    grid-column: 3;
+    color: #555;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding-left: 0;
+  }
+
+  /* Category colours */
+  .c-LOG  { color: #666; }
+  .c-WRN  { color: #c90; }
+  .c-ERR  { color: #d44; }
+  .c-HTTP-IN  { color: #48a; }
+  .c-HTTP-OUT { color: #4aa; }
+  .c-WS   { color: #4a7; }
+
+  /* TX / RX highlights within serial log lines */
+  .tx { color: #e80; }
+  .rx { color: #6ce; }
+
+  /* Separator injected on clear */
+  .separator {
+    grid-column: 1 / -1;
+    border-top: 1px dashed #2a2a2a;
+    margin: 4px 0;
+    color: #333;
+    font-size: 11px;
+    padding: 2px 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="dot" id="dot"></span>
+  <h1>PyXantech Monitor</h1>
+  <span class="count" id="count">0 events</span>
+  <button id="btn-pause" onclick="togglePause()">Pause</button>
+  <button onclick="clearLog()">Clear</button>
+</header>
+
+<div id="log"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const logEl    = document.getElementById('log');
+  const dot      = document.getElementById('dot');
+  const btnPause = document.getElementById('btn-pause');
+  const countEl  = document.getElementById('count');
+
+  let paused     = false;
+  let autoScroll = true;
+  let totalCount = 0;
+
+  // ── Pause / resume ───────────────────────────────────────────────────────
+  function togglePause() {
+    paused = !paused;
+    btnPause.textContent = paused ? 'Resume' : 'Pause';
+    btnPause.classList.toggle('active', paused);
+  }
+
+  // ── Clear ────────────────────────────────────────────────────────────────
+  function clearLog() {
+    const sep = document.createElement('div');
+    sep.className = 'separator';
+    sep.textContent = '── cleared ──────────────────────────────────────────────';
+    logEl.appendChild(sep);
+    // Remove all entries before the separator
+    while (logEl.firstChild !== sep) logEl.removeChild(logEl.firstChild);
+    if (autoScroll) logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // ── Category helpers ─────────────────────────────────────────────────────
+  function catClass(cat) {
+    if (cat === 'LOG')          return 'c-LOG';
+    if (cat === 'WRN')          return 'c-WRN';
+    if (cat === 'ERR')          return 'c-ERR';
+    if (cat.startsWith('HTTP ↓')) return 'c-HTTP-IN';
+    if (cat.startsWith('HTTP ↑')) return 'c-HTTP-OUT';
+    return 'c-WS';
+  }
+
+  // ── Serial TX/RX colouring ───────────────────────────────────────────────
+  function summaryHtml(cat, summary) {
+    const s = esc(summary);
+    if (cat === 'LOG') {
+      if (summary.startsWith('TX:')) return `<span class="tx">${s}</span>`;
+      if (summary.startsWith('RX:')) return `<span class="rx">${s}</span>`;
+    }
+    return s;
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Append one event row ─────────────────────────────────────────────────
+  function appendEntry(e) {
+    if (paused) return;
+
+    const row = document.createElement('div');
+    row.className = 'entry';
+    row.innerHTML =
+      `<span class="ts">${esc(e.ts)}</span>` +
+      `<span class="cat ${catClass(e.cat)}">${esc(e.cat)}</span>` +
+      `<span class="summary">${summaryHtml(e.cat, e.summary)}</span>` +
+      (e.detail ? `<span class="detail">${esc(e.detail)}</span>` : '');
+
+    logEl.appendChild(row);
+    totalCount++;
+    countEl.textContent = `${totalCount} events`;
+
+    // Trim DOM to last 500 visible rows so the page stays fast
+    while (logEl.children.length > 500) logEl.removeChild(logEl.firstChild);
+
+    if (autoScroll) logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // Stop auto-scroll when the user scrolls up; resume when back at bottom
+  logEl.addEventListener('scroll', () => {
+    autoScroll = (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) < 60;
+  });
+
+  // ── Render history injected at page load ─────────────────────────────────
+  const history = {{ history | safe }};
+  history.forEach(appendEntry);
+
+  // ── Live SocketIO feed ───────────────────────────────────────────────────
+  const socket = io();
+
+  socket.on('connect', () => {
+    dot.classList.add('live');
+  });
+
+  socket.on('disconnect', () => {
+    dot.classList.remove('live');
+    appendEntry({
+      ts: new Date().toLocaleTimeString('en-US', {hour12: false}),
+      cat: 'WRN',
+      summary: 'Disconnected from server',
+      detail: '',
+    });
+  });
+
+  socket.on('monitor_event', appendEntry);
+</script>
+</body>
+</html>
