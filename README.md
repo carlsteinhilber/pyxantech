@@ -589,6 +589,8 @@ the script will report back both the `token` and `machine_identifier`, and then 
 
 ---
 ## Change Log
+UPDATE 2026-07-16:
+- refactoring
 
 UPDATE 2024-07-15:
 - new URL/REST-like command features
