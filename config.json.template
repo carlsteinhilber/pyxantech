@@ -1,18 +1,18 @@
 {
     "system":{
-        "webuiport":5000,
         "serialport":"ttyUSB0",
+        "webuiport":5000,
         "usesimulator": false,
-        "debugging": true,
+        "debugging": false,
         "appname": "Music Control",
-        "theme": "original"
+        "theme": ""
     },
     "plex": {
-        "ip_address": "192.168.1.117",
+        "ip_address": "192.168.1.20",
         "port": 32400,
-        "token": "s9dsXxcKdJyxcFY_cesJ",
-        "machine_identifier": "0d0d4ba9ef02d1b4b13a23ba5d6a396d7c479d63",
-        "default_playlist_id": "521354"
+        "token": "",
+        "machine_identifier": "",
+        "default_playlist_id": ""
     },
     "zones": [
         {"zone":1, "name":"Living Room", "enabled": true, "default_volume": 5 },
@@ -25,11 +25,11 @@
         {"zone":8, "name":"", "enabled": false, "default_volume": 5  }
     ],
     "sources": [
-        {"source":1, "name":"Pandora", "enabled": true, "type": "streaming", "url":"http://192.168.1.31:5000/", "usesimulator": false },
-        {"source":2, "name":"TiVO", "enabled": true, "type": "device" },
+        {"source":1, "name":"Pandora", "enabled": true, "type": "streaming", "url":"http://192.168.1.21:5000/", "usesimulator": false },
+        {"source":2, "name":"", "enabled": false, "type": "device" },
         {"source":3, "name":"Apple TV", "enabled": true, "type": "device" },
         {"source":4, "name":"CD Player", "enabled": true, "type": "device" },
-        {"source":5, "name":"Plex", "enabled": true, "type": "streaming", "url":"http://192.168.1.29:32500/", "usesimulator": false },
+        {"source":5, "name":"Plex", "enabled": true, "type": "streaming", "url":"http://192.168.1.22:32500/", "usesimulator": false },
         {"source":6, "name":"", "enabled": false, "type": "device" },
         {"source":7, "name":"", "enabled": false, "type": "device" },
         {"source":8, "name":"", "enabled": false, "type": "device" }

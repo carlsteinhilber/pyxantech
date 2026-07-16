@@ -1,0 +1,13 @@
+/* light.css – Light theme override for Music Control
+ * Only variables that differ from the dark default need to be listed here.
+ * Set "theme": "light" in config.json system node to activate. */
+
+:root {
+  --bg:       #f1f5f9;
+  --surface:  #ffffff;
+  --surface2: #e2e8f0;
+  --border:   #cbd5e1;
+  --text:     #0f172a;
+  --muted:    #64748b;
+  --shadow:   0 4px 24px rgba(0,0,0,.10);
+}

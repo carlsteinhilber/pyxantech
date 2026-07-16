@@ -1,568 +1,722 @@
-#!/usr/bin/env python
-# PROJECT: PyXantech
-# A Raspberry Pi-ready Python/Flask controller for Xantech RS-232-capable multi-zone amplifiers
-# by ProfessorC  (professorc@gmail.com)
-# https://github.com/grandexperiments/pyxantech
-# FILE: app.py - main routines
-'''
-    v.1.0 - Initial release  2019/03/25 - GNU General Public License (GPL 2.0)
-    v.2.0 - Python 3/Pico release  2023/10/25 - GNU General Public License (GPL 2.0)
-    v.2.1 - Added URL /command functionality, and updated config.json to include system settings
-'''
+"""
+app.py – Flask + Flask-SocketIO entry point for the Xantech MRC88 controller.
 
-'''
-    For Pandora, I'm now using PianoBar/PatioBar. PianoBar is the headless Pandora player, and
-    PatioBar is a separate project to build a web UI for PianoBar. I installed both on a separate
-    Raspberry Pi, using the guide here: 
-        https://thisdavej.com/creating-a-raspberry-pi-pandora-player-with-remote-web-control/
-    which allowed me to put a HiRes DAC hat on that Pi and connect it directly to the Xantech
-    amp. Then, in the congif.json file for PyXantech, simply add the source, give it a type
-    of "streaming", and set the URL to the PatioBar UI - it will look something like this:
-        http://192.168.xxx.xxx:3000/
-    PyXantech will automatically add a tab at the top of it's interface to control PianoBar.
-'''
+Run on the Raspberry Pi with:
+    python app.py
 
-# moved most of the configurable system settings to the config.json file to avoid having to edit this file
+The web UI is served on port 5001 so it doesn't clash with the Pandora
+pianobar web interface which occupies port 5000.
+"""
 
-# BASE LIBRARIES
-import io
+
+import collections
 import json
+import logging
 import os
-from os.path import dirname, abspath, join
-
-# load and store zone and source names from config json
-xantech_config = {
-    "system":{
-        "serialport":"ttyUSB0",
-        "usesimulator": False,
-        "debugging": False
-    },
-    "zones" : [],
-    "sources" : []
-}
-
-config_filename = 'config.json'
-homepath = dirname(abspath(__file__))
-full_filename=join(homepath,config_filename)
-f = open(full_filename)
-xantech_config = json.load(f)
-f.close()
-
-# bulletproof for new style config file
-if not "system" in xantech_config:
-    print("PLEASE UPDATE YOUR config.json FILE!")
-    xantech_config["system"] = {
-        "serialport":"ttyUSB0",
-        "usesimulator": False,
-        "debugging": False
-    }
-if not "serialport" in xantech_config["system"]:
-    print("PLEASE UPDATE YOUR config.json FILE! serialport IS NOT DEFINED!")
-    xantech_config["system"]["serialport"] = "ttyUSB0"
-
-if not "usesimulator" in xantech_config["system"]:
-    print("PLEASE UPDATE YOUR config.json FILE! usesimulator IS NOT DEFINED!")
-    xantech_config["system"]["usesimulator"] = False
-
-if not "debugging" in xantech_config["system"]:
-    print("PLEASE UPDATE YOUR config.json FILE! debugging IS NOT DEFINED!")
-    xantech_config["system"]["debugging"] = False
-
-## GLOBAL SETTINGS (adjust as necessary)
-ACTIVE_SERIAL=not xantech_config["system"]["usesimulator"]  # is actual Xantech connected to serial port (if 'False', use simulator)
-ACTIVE_DEBUG=xantech_config["system"]["debugging"]  # is debugger active
-
-# The USB port to use on the Raspberry Pi. This can usually be left as '/dev/ttyUSB0',
-# but if you have multiple devices connected to your Pi, you may need to adjust this
-# value. See Raspberry Pi documentation on specifying USB ports.
-ACTIVE_USBPORT="/dev/"+xantech_config["system"]["serialport"]
-
-# Set this variable to "threading", "eventlet" or "gevent" to test the
-# different async modes, or leave it set to None for the application to choose
-# the best option based on installed packages.
-SOCKET_ASYNC_MODE = "threading" # 'eventlet'
-
-# Xantech device setup
-XANTECH_SOURCES = 8
-XANTECH_ZONES = 8
-
-
-
-# ****   HERE BE DRAGONS!!   ****
-# **** NO OTHER EDITS NEEDED ****
-
-# ADDITIONAL LIBRARIES (in alphabetical order)
-import atexit
-# import eventlet
-# eventlet.monkey_patch()
-# import flask
-# import flask_socketio
-from flask import Flask, render_template, session, request
-from flask_socketio import SocketIO, emit, disconnect
-
-if(ACTIVE_SERIAL):
-    print("Using serial port: "+ACTIVE_USBPORT)
-    import serial
-    print("PySerial ver: " + serial.__version__)
-else:
-    # use Xantech simulator as fake serial
-    print("Using serial port simulator")
-    # use a spare serial port as a stub for the simulator
-    # ACTIVE_USBPORT="/dev/tty0"
-    import xantech_sim as serial
-from subprocess import call
-import sys
+import socket
+import struct
+import threading
 import time
-import urllib.parse
+from flask import Flask, render_template, jsonify, request
+from flask_socketio import SocketIO, emit
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# App + SocketIO
+# ---------------------------------------------------------------------------
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
+app.config["SECRET_KEY"] = "xantech-mrc88-pi-secret"
 
-socketio = SocketIO(app, async_mode=SOCKET_ASYNC_MODE, exclusive=True)
+# Cache-busting version stamp — changes on every server restart so browsers
+# always fetch the latest JS/CSS rather than serving stale cached copies.
+_JS_VERSION = int(time.time())
 
-# keep track of connected clients (TODO: auto disconnect clients after inactivity?)
-connected_clients={}
+# threading async_mode avoids the eventlet / gevent monkey-patch requirement
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
-try:
-    serial_port=serial.Serial(port=ACTIVE_USBPORT, baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=None, xonxoff=False, rtscts=False, write_timeout=None, dsrdtr=False )
-except:
-    print("The serial port "+ACTIVE_USBPORT+" could not be opened. Unfortunately, this is a fatal error. Ensure the proper serial port is specified in the config.json file, and try rebooting the pi. You may also try either setting usesimulator to true in config.json to use the Xantech simulator, or running the xantech_test.py to determine the proper serial port for your system.")
-    sys.exit(0)
+# ---------------------------------------------------------------------------
+# Load config
+# ---------------------------------------------------------------------------
 
-    
+with open("config.json") as _f:
+    config: dict = json.load(_f)
 
+# ---------------------------------------------------------------------------
+# MRC88 controller
+# ---------------------------------------------------------------------------
 
-# zone status ('?1ZD+')
-# "#1ZS PR1 SS3 VO7 MU0 TR7 BS7 BA32 LS0 PS0"
+from xantech import MRC88Controller
 
-# helpful dictionary to translate Xantech shortcodes to true actions
-status_dict={
-    'ZS':'status',
-    'PR':'power',
-    'SS':'source',
-    'VO':'volume',
-    'MU':'mute',
-    'TR':'treble',
-    'BS':'bass',
-    'BA':'balance',
-    'LS':'linked',
-    'PS':'paged'
-}
+controller = MRC88Controller(
+    port=config["system"]["serialport"],
+    use_simulator=config["system"].get("usesimulator", False),
+    debugging=config["system"].get("debugging", False),
+)
+controller.set_socketio(socketio)
 
-## HELPER FUNCTIONS
-# left() - pythonized string left
-def left(s, amount):
-    return s[:amount]
+# ---------------------------------------------------------------------------
+# Streaming sources
+# ---------------------------------------------------------------------------
 
-## mid() - pythonized string mid
-def mid(s, offset, amount):
-    return s[offset:offset+amount]
+from streaming import create_streaming_source
 
-## debug_log() - print to console (turn off for production)
-def debug_log(msg):
-    if(ACTIVE_DEBUG):
-        print(msg)
-    return True
-
-# is_raspberry_pi() - check if app is running on Raspberry Pi
-# credit: Arthur Barseghyan
-# from: https://raspberrypi.stackexchange.com/questions/5100/detect-that-a-python-program-is-running-on-the-pi
-# (used during the shutdown/reboot routes for the Pi... don't want to shut down dev server if it's not a Pi)
-def is_raspberry_pi():
-    debug_log("CALL is_raspberry_pi")
-    found = False
-    try:
-        with io.open('/proc/cpuinfo', 'r') as cpuinfo:
-            found = False
-            for line in cpuinfo:
-                trimmedLine = line.strip()
-                debug_log("is_raspberry_pi/cpuinfo: "+trimmedLine)
-                if trimmedLine.startswith('Hardware'):
-                    found = True
-                    label, value = trimmedLine.split(':', 1)
-                    value = value.strip()
-                    debug_log("is_raspberry_pi/Hardware: "+value)
-                    if value not in (
-                        'BCM2708',
-                        'BCM2709',
-                        'BCM2835',
-                        'BCM2836'
-                    ):
-                        return False
-            if not found:
-                return False
-    except:
-        return False
-    debug_log("Is Raspberry Pi: "+found)
-    return found
-
-
-
-## SERIAL FUNCTIONS
-# send_command() - send a command/query out to the Xantech
-def send_to_device(message):
-    debug_log("CALL send_to_device")
-    debug_log(message)
-    response_string=''
-    response_character=''
-        
-    try:
-        serial_port.flushInput()
-        serial_port.flushOutput()
-        # serial_port.write(message)
-        serial_port.write(message.encode('utf-8'))
-        running=True;
-        while running:
-            response_character=str(serial_port.read(1).decode('utf-8'))
-            # response_character=str(serial_port.read(1))
-            if response_character != '!' and response_character != '?' and response_character != '+':
-                response_string+=response_character
-            if (response_character == '+') or (response_string.strip()=='ERROR') or (response_string.strip()=='OK'): 
-                running=False
-    except Exception as e:
-        print(e)
-    debug_log("Serial response: " + response_string)
-    return response_string
-
-
-# get_zone_status() - get the current status data for a zone
-def get_zone_status(zone):
-    debug_log("CALL get_zone_status")
-    status={}
-    command=str('?'+str(zone)+'ZD+')
-    status_string=send_to_device(command)
-    status_array=status_string.split(' ')
-    for status_item in status_array:
-        status_key=status_dict.get(left(status_item,2), '')
-        if len(status_key)>0:
-            status[status_key] = int(mid(status_item,2,len(status_item)))
-    debug_log(status)
-    return status
-
-def get_all_zone_status():
-    debug_log("CALL get_all_zone_status")
-    for z in xantech_config["zones"]:
-        if z["enabled"]:
-            zone_status = get_zone_status(z["zone"])
-            emit('set_status',
-                {'zone':z["zone"],
-                'command':'?'+str(z["zone"])+'ZS+',
-                'status':zone_status},
-                broadcast=True,
-                namespace="/pyxantech")
-
-
-# goodbye() - register an exit event
-@atexit.register
-def goodbye():
-    debug_log("CALL goodbye")
-    print("Exiting...")
-
-
-## SOCKET IO EVENTS
-# pyxantech_message() - event testing loopback, except a message and send it back to the UI
-@socketio.on('xantech_message', namespace='/pyxantech')
-def pyxantech_message(message):
-    debug_log("CALL pyxantech_message")
-    debug_log(message)
-    emit('xantech_response',
-         {'data': message['data'] }
+_streaming_sources: dict[int, object] = {}
+for _src in config.get("sources", []):
+    if _src.get("type") == "streaming" and _src.get("enabled"):
+        _streaming_sources[_src["source"]] = create_streaming_source(
+            _src, config.get("plex")
         )
 
-# pyxantech_zone_all_status() - get and return the status data for ALL zones
-# had to move this to serverside because socket async was causing collisions
-@socketio.on('xantech_all_status', namespace='/pyxantech')
-def pyxantech_zone_all_status(msg):
-    debug_log('CALL pyxantech_zone_all_status')
-    get_all_zone_status()
+# ---------------------------------------------------------------------------
+# HTTP routes
+# ---------------------------------------------------------------------------
 
 
-# pyxantech_zone_status() - get and return the status data for a zone
-@socketio.on('xantech_status', namespace='/pyxantech')
-def pyxantech_zone_status(message):
-    debug_log('CALL pyxantech_zone_status')
-    zone=message['zone']
-    zone_status = get_zone_status(zone)
-    # zone_status = ""
-    emit('set_status',
-         {'zone':zone,
-          'command':'?'+str(zone)+'ZS+',
-          'status':zone_status},
-          broadcast=True)
-
-# pyxantech_command() - send a command/query to Xantech
-@socketio.on('xantech_command', namespace='/pyxantech')
-def pyxantech_command(message):
-    debug_log("CALL pyxantech_command")
-    debug_log(message)
-    zone=message['zone']
-    command=message['command']
-    volume=message['volume']
-    status=send_to_device(command)
-    if zone == 0:
-        get_all_zone_status()
-    else:
-        if status == "OK":
-            status=get_zone_status(zone)
-
-        if status["volume"]==0:
-            status["volume"]=volume
-
-        emit('set_status',
-            {'zone':zone,
-            'command':command,
-            'status':status},
-            broadcast=True)
-
-
-
-
-# pyxantech_connect() - client has connected to socket
-@socketio.on('connect', namespace='/pyxantech')
-def pyxantech_connect():
-    debug_log("CALL pyxantech_connect")
-
-    clientId=""
-    if(hasattr(request,'sid')):
-        clientId=request.sid
-
-    debug_log('Client connected: '+clientId)
-    emit('xantech_response',
-         {'data': 'Connected',
-          'count': 0})
-    # for zone in range(1, 8):
-    #     print('Initial status of: '+str(zone))
-    #     emit('set_status', {'zone':zone,'command':'?'+str(zone)+'ZS+','status':get_zone_status(zone)}, broadcast=True)
-    emit('done_loading',
-         {'data': 'Send Done Loading'})
-    if clientId not in connected_clients:
-        connected_clients[clientId] = time.time()
-    print('* Clients remaining: '+str(len(connected_clients)))
-
-# pyxantech_disconnect() - client has disconnected from socket
-@socketio.on('disconnect', namespace='/pyxantech')
-def pyxantech_disconnect():
-    debug_log("CALL pyxantech_disconnect")
-    clientId=""
-    if(hasattr(request,'sid')):
-        clientId=request.sid
-
-
-    print('Client disconnected', clientId)
-    if clientId in connected_clients:
-        del connected_clients[clientId]
-    print('* Clients remaining: '+str(len(connected_clients)))
-
-# pyxantech_disconnect_request() - client has requested to disconnect
-# had to create this stub to solve some issues calling disconnect directly (TODO: research direct disconnect issues)
-@socketio.on('disconnect_request', namespace='/pyxantech')
-def pyxantech_disconnect_request(message):
-    debug_log("CALL pyxantech_disconnect_request")
-    emit('xantech_response',
-         {'data': 'Disconnected!'})
-    disconnect()
-
-
-## FLASK ROUTES
-# app_exit() - route to shutdown app
-@app.route('/exit')
-def app_exit():
-    debug_log("CALL app_exit")
-    try:
-        sys.exit(0)
-    except Exception as e:
-        print("Exit exception:"+ str(e))
-    else:
-        debug_log("No exception in exiting")
-
-# app_restart() - route to restart app (experimental)
-# (TODO: throws exception about reusing the socket - figure out how to close socket before restart)
-@app.route('/restart')
-def app_restart():
-    debug_log("CALL app_restart")
-    try:
-        # try to close all connections first
-        # disconnect()
-        os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
-    except Exception as e:
-        print("Restart exception:"+ str(e))
-    else:
-        # could not restart, just exit instead
-        debug_log("No exception in restarting")
-
-# pi_shutdown() - route to shutdown the whole pi (experimental)
-@app.route('/shutdown')
-def pi_shutdown():
-    debug_log("CALL pi_shutdown")
-    if(is_raspberry_pi()):
-        # try to close all connections first
-        try:
-            call("sudo nohup shutdown -P now", shell=True)
-        except Exception as e:
-            # could not shutdown, just exit app instead
-            debug_log("There was a problem shutting down the system. "+ str(e) +"Exiting app instead.")
-            app_exit()
-    else:
-        debug_log("Could not shutdown non-Raspberry Pi system. Exiting app instead.")
-        app_exit()
-    return True
-
-# pi_reboot() - route to reboot the whole pi (experimental)
-@app.route('/reboot')
-def pi_reboot():
-    debug_log("CALL pi_reboot")
-    try:
-        if(is_raspberry_pi()):
-            # try to close all connections first
-            # disconnect()
-            call("sudo nohup shutdown -r now", shell=True)
-        else:
-            debug_log("Could not restart non-Raspberry Pi system. Restarting app instead.")
-            app_restart()
-    except:
-        # could not restart, just restart app instead
-        debug_log("There was a problem restarting down the system. Restarting app instead.")
-        app_restart()
-
-@app.route('/command')
-def pi_command():
-    print('command!')
-    # /command?z=1&pr=1&ss=3&vo=20
-    alloff = request.args.get('ao')
-    zone = request.args.get('z')
-    power = request.args.get('pr')
-    source = request.args.get('ss')
-    volume = request.args.get('vo')
-
-    if(alloff is None):
-        alloff = request.args.get('alloff')
-    if(zone is None):
-        zone = request.args.get('zone')
-    if(power is None):
-        power = request.args.get('power')
-    if(source is None):
-        source = request.args.get('source')
-    if(volume is None):
-        volume = request.args.get('volume')
-
-    # if the "ao" parameter is included, ignore all other parameters and just turn everything off
-    if(alloff is not None):
-        alloffstatus = send_to_device("!AO+")
-        get_all_zone_status()
-        return { "status":"Success", "message": "All zones turned off" }
-
-    # otherwise, check if a zone was set, as it is REQUIRED for all other commands
-    if(zone is None):
-        return { "status":"Failure", "message": "Zone not set" }
-    else:
-        currentzone = 0
-        for z in xantech_config["zones"]:
-            if(z["enabled"]):
-                if( str(z["zone"]) == zone or z["name"].upper() == urllib.parse.unquote(zone).upper() ):
-                    currentzone = int(z["zone"])
-                    break
-        
-        if currentzone < 1:
-            return { "status":"Failure", "message": "Specified zone '"+zone+"' not enabled" }
-
-        status=get_zone_status(currentzone)
-
-        statuslist = []
-
-        # if the power value is valid, set the new power value
-        if(power is not None):
-            # if( (power == '0' or power == '1') and power != status["power"]):
-            if( (power == '0' or power == '1') ):
-                powercommand = "!"+str(currentzone)+"PR"+power+"+"
-                powerstatus = send_to_device(powercommand)
-                if(powerstatus == "OK"):
-                    statuslist.append('power was set successfully')
-                else:
-                    statuslist.append('power setting failed')
-            else:
-                statuslist.append('power setting was invalid')
-
-        if(volume is not None):
-            # if( volume.isnumeric() and (0 <= int(volume) <=49) and volume != status["volume"] ):
-            if( volume.isnumeric() and (0 <= int(volume) <=49) ):
-                volumecommand = "!"+str(currentzone)+"VO"+volume+"+"
-                volumestatus = send_to_device(volumecommand)
-                if(volumestatus == "OK"):
-                    statuslist.append('volume was set successfully')
-                else:
-                    statuslist.append('volume setting failed')
-            else:
-                statuslist.append('volume value was invalid')
-
-        if(source is not None):
-            currentsource = 0
-            for s in xantech_config["sources"]:
-                if(s["enabled"]):
-                    if( str(s["source"]) == source or s["name"].upper() == urllib.parse.unquote(source).upper() ):
-                        currentsource = int(s["source"])
-                        break
-            
-            if currentsource < 1:
-                statuslist.append("specified source '"+source+"' was invalid or not enabled")
-            else:
-                sourcecommand = "!"+str(currentzone)+"SS"+str(currentsource)+"+"
-                sourcestatus = send_to_device(sourcecommand)
-
-
-                if(sourcestatus == "OK"):
-                    statuslist.append('source was set successfully')
-                else:
-                    statuslist.append('source setting failed')
-
-
-
-        # update the zone status for all other connected clients
-        zone_status = get_zone_status(currentzone)
-        emit('set_status',
-            {'zone':str(currentzone),
-            'command':'?'+str(currentzone)+'ZS+',
-            'status':zone_status},
-            broadcast=True,
-            namespace='/pyxantech')
-        
-        return { "status":"Success", "message": ', '.join(statuslist),"meta": zone_status}
-    
-    return "Failure"
-
-# index() - main route to display default UI page
-@app.route('/')
+@app.route("/")
 def index():
-    debug_log("CALL index")
-    stageMarkup=''
-
-    streaming = []
-    
-
-    # determine if any of the sources are streaming media
-    print("Loading sources...")
-    for source in xantech_config["sources"]:
-        debug_log(source)
-        if source["type"]=="streaming":
-            streaming.append(source)
-    debug_log(streaming)
-
-    # print("Loading zones...")
-    # for zone in xantech_config["zones"]:
-    #     print(zone)
-    #     if source["type"]=="streaming":
-    #         streaming.append(source)
-    # print(streaming)
+    appname = config["system"].get("appname", "Xantech MRC88")
+    theme = config["system"].get("theme", "").strip()
+    theme_file = None
+    if theme:
+        candidate = os.path.join(app.static_folder, "styles", "themes", f"{theme}.css")
+        if os.path.isfile(candidate):
+            theme_file = f"styles/themes/{theme}.css"
+    return render_template(
+        "index.html",
+        config_json=json.dumps(config),
+        appname=appname,
+        theme_file=theme_file,
+        js_version=_JS_VERSION,
+    )
 
 
-    print("Loading UI...")
-    return render_template('dashboard-template.html',
-                           sources=xantech_config["sources"],
-                           zones=xantech_config["zones"],
-                           streaming=streaming,
-                           async_mode=socketio.async_mode)
+@app.route("/api/config")
+def api_config():
+    return jsonify(config)
 
-# Flask app init
-# use socketio.run(), instead of app.run(), to solve socketio issues and run app in production-ready environment
-if __name__ == '__main__':
-    socketio.run(app, debug=ACTIVE_DEBUG,host='0.0.0.0')
+
+@app.route("/api/states")
+def api_states():
+    # JSON keys must be strings
+    return jsonify({str(k): v for k, v in controller.get_all_states().items()})
+
+
+# -- Streaming proxy --------------------------------------------------------
+
+
+@app.route("/api/streaming/<int:source_id>/status")
+def api_streaming_status(source_id: int):
+    src = _streaming_sources.get(source_id)
+    if src is None:
+        return jsonify({"error": "source not found"}), 404
+    return jsonify(src.get_status())
+
+
+@app.route("/api/streaming/<int:source_id>/play", methods=["POST"])
+def api_streaming_play(source_id: int):
+    src = _streaming_sources.get(source_id)
+    if src:
+        src.play()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/streaming/<int:source_id>/pause", methods=["POST"])
+def api_streaming_pause(source_id: int):
+    src = _streaming_sources.get(source_id)
+    if src:
+        src.pause()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/streaming/<int:source_id>/next", methods=["POST"])
+def api_streaming_next(source_id: int):
+    src = _streaming_sources.get(source_id)
+    if src:
+        src.next_track()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/streaming/<int:source_id>/prev", methods=["POST"])
+def api_streaming_prev(source_id: int):
+    src = _streaming_sources.get(source_id)
+    if src:
+        src.prev_track()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/streaming/<int:source_id>/playlists")
+def api_streaming_playlists(source_id: int):
+    src = _streaming_sources.get(source_id)
+    if src is None:
+        return jsonify([])
+    return jsonify(src.get_playlists())
+
+
+@app.route("/api/streaming/<int:source_id>/playlist", methods=["POST"])
+def api_streaming_set_playlist(source_id: int):
+    src = _streaming_sources.get(source_id)
+    if src:
+        data = request.get_json(silent=True) or {}
+        src.set_playlist(str(data.get("id", "")))
+    return jsonify({"ok": True})
+
+# ---------------------------------------------------------------------------
+# Zone REST API  (for SmartThings, Home Assistant, Node-RED, etc.)
+# ---------------------------------------------------------------------------
+# All endpoints return the current zone state as JSON so the caller can
+# confirm the result without a separate GET.  Every write goes through the
+# same MRC88Controller methods, so Socket.IO events fire and the web UI
+# stays in sync automatically.
+#
+#   GET  /api/zones              → {1: {power, volume, source, mute, name}, ...}
+#   GET  /api/zones/<zone>       → {power, volume, source, mute}
+#   PUT  /api/zones/<zone>       → update any subset of fields; returns new state
+#
+# PUT body (all fields optional):
+#   { "power": true|false,
+#     "volume": 0-38,
+#     "volume_delta": ±N,   ← relative change; applied after absolute if both sent
+#     "source": 1-8,
+#     "muted": true|false }
+# ---------------------------------------------------------------------------
+
+
+def _zone_state_with_name(zone: int) -> dict:
+    """Return controller state for a zone with the config name included."""
+    zone_cfg = next((z for z in config.get("zones", []) if z["zone"] == zone), {})
+    return {**controller.state[zone], "name": zone_cfg.get("name", "") or f"Zone {zone}"}
+
+
+def _zone_or_404(zone: int):
+    """Return (state_dict, None) or (None, error_response)."""
+    enabled = {z["zone"] for z in config.get("zones", []) if z.get("enabled")}
+    if zone not in enabled:
+        return None, (jsonify({"error": f"zone {zone} not found or not enabled"}), 404)
+    return controller.state[zone], None
+
+
+@app.route("/api/zones")
+def api_zones():
+    """Return state for all enabled zones."""
+    zone_configs = {z["zone"]: z for z in config.get("zones", []) if z.get("enabled")}
+    result = {}
+    for z in sorted(zone_configs):
+        state = dict(controller.state[z])
+        state["name"] = zone_configs[z].get("name", "") or ("Zone " + str(z))
+        result[str(z)] = state
+    return jsonify(result)
+
+
+@app.route("/api/zones/<int:zone>")
+def api_zone_get(zone: int):
+    """Return state for a single zone."""
+    state, err = _zone_or_404(zone)
+    if err:
+        return err
+    return jsonify(_zone_state_with_name(zone))
+
+
+@app.route("/api/zones/off", methods=["POST"])
+def api_zones_all_off():
+    """Turn all zones off via the MRC88 !AO+ command."""
+    controller.all_off()
+    return jsonify({"ok": True})
+
+
+def _resolve_source(val) -> int:
+    """Accept a source number (1-8) or a source name ('Plex', 'Pandora', …)."""
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        name = str(val).lower()
+        for src in config.get("sources", []):
+            if src.get("name", "").lower() == name:
+                return src["source"]
+        raise ValueError(f"Unknown source name: {val!r}")
+
+
+def _parse_bool(val) -> bool:
+    """Accept bool, int, or string truthy values from JSON or query strings."""
+    if isinstance(val, bool):
+        return val
+    return str(val).lower() in ("true", "on", "1", "yes")
+
+
+def _apply_zone_changes(zone: int, params: dict):
+    """
+    Apply a dict of zone changes.  Used by both the PUT (JSON body) and
+    GET /set (query string) endpoints so the logic lives in one place.
+
+    Accepted keys (all optional):
+      power         bool / "true"/"on"/"1"  – turn zone on/off
+      volume        int                     – set absolute volume (0-38)
+      volume_delta  int                     – adjust volume by ±N steps
+      source        int                     – select source (1-8)
+      muted         bool / "true"/"on"/"1"  – mute/unmute
+    """
+    if "power" in params:
+        turning_on = _parse_bool(params["power"])
+        old_source = controller.state[zone].get("source")
+        controller.set_power(zone, turning_on)
+        if turning_on:
+            _nudge_streaming_play(zone)
+        elif old_source in _streaming_sources:
+            _auto_pause_if_unused(old_source)
+
+    if "source" in params:
+        try:
+            source = _resolve_source(params["source"])
+        except ValueError:
+            raise ValueError(
+                f"Invalid source {params['source']!r} — use a number (1-8) "
+                f"or a name from config.json"
+            )
+        old_source = controller.state[zone].get("source")
+        controller.set_source(zone, source)
+        if controller.state[zone].get("power") and source in _streaming_sources:
+            _streaming_sources[source].play()
+        if old_source != source and old_source in _streaming_sources:
+            _auto_pause_if_unused(old_source)
+
+    if "volume" in params:
+        try:
+            controller.set_volume(zone, int(params["volume"]))
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid volume {params['volume']!r} — must be an integer 0-38")
+
+    if "volume_delta" in params:
+        try:
+            delta = int(params["volume_delta"])
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid volume_delta {params['volume_delta']!r} — must be an integer")
+        if delta > 0:
+            for _ in range(delta):
+                controller.volume_up(zone)
+        elif delta < 0:
+            for _ in range(-delta):
+                controller.volume_down(zone)
+
+    if "muted" in params:
+        controller.set_mute(zone, _parse_bool(params["muted"]))
+
+
+@app.route("/api/zones/<int:zone>", methods=["PUT"])
+def api_zone_put(zone: int):
+    """Update zone properties via PUT with a JSON body."""
+    _, err = _zone_or_404(zone)
+    if err:
+        return err
+    try:
+        _apply_zone_changes(zone, request.get_json(silent=True) or {})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(_zone_state_with_name(zone))
+
+
+@app.route("/api/zones/<int:zone>/set")
+def api_zone_set(zone: int):
+    """
+    Update zone properties via GET with query string parameters.
+    Intended for home automation tools (IFTTT, Home Assistant webhooks, etc.)
+    that cannot send PUT requests with a JSON body.
+
+    Examples:
+      GET /api/zones/1/set?power=true
+      GET /api/zones/1/set?power=on&source=Plex&volume=20
+      GET /api/zones/3/set?muted=true
+      GET /api/zones/1/set?volume_delta=-5
+    """
+    _, err = _zone_or_404(zone)
+    if err:
+        return err
+    try:
+        _apply_zone_changes(zone, request.args)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(_zone_state_with_name(zone))
+
+
+# -- Connection test --------------------------------------------------------
+
+
+@app.route("/api/streaming/<int:source_id>/test")
+def api_streaming_test(source_id: int):
+    """
+    Quick diagnostic: hit GET /api/streaming/5/test (Plex is source 5)
+    to verify server URL and token are correct before doing anything else.
+    """
+    src = _streaming_sources.get(source_id)
+    if src is None:
+        return jsonify({"error": "source not found"}), 404
+    return jsonify(src.test_connection())
+
+@app.route('/description.xml')
+def description():
+    xml = '''<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion><major>1</major><minor>0</minor></specVersion>
+  <device>
+    <deviceType>urn:xantech:device:AudioController:1</deviceType>
+    <friendlyName>Xantech Audio Controller</friendlyName>
+    <manufacturer>Xantech</manufacturer>
+    <modelName>Audio Controller</modelName>
+    <UDN>uuid:xantech-audio-controller-001</UDN>
+  </device>
+</root>'''
+    return xml, 200, {'Content-Type': 'application/xml'}
+
+# ---------------------------------------------------------------------------
+# Server-side streaming status push
+# ---------------------------------------------------------------------------
+# One background thread polls every streaming source every 5 seconds and
+# broadcasts the result to all connected browsers via Socket.IO.
+# This means only one HTTP request goes out per source regardless of how
+# many browser tabs are open, and all clients update simultaneously.
+
+def _streaming_status_pusher():
+    while True:
+        time.sleep(5)
+        for source_id, src in _streaming_sources.items():
+            try:
+                status = src.get_status()
+                # Always emit — even {"available": False} — so the UI can
+                # show an unavailable state rather than going silently stale.
+                socketio.emit(
+                    "streaming_status",
+                    {"source_id": source_id, "status": status},
+                )
+            except Exception as exc:
+                logger.warning("Status push error source %s: %s", source_id, exc)
+
+if _streaming_sources:
+    threading.Thread(
+        target=_streaming_status_pusher,
+        daemon=True,
+        name="streaming-pusher",
+    ).start()
+
+    def _startup_pause():
+        # Wait for the MRC88 startup sync to populate zone states,
+        # then pause any streaming source that has no active zone.
+        time.sleep(8)
+        for src_id in list(_streaming_sources):
+            _auto_pause_if_unused(src_id)
+
+    threading.Thread(target=_startup_pause, daemon=True, name="startup-pause").start()
+
+
+# ---------------------------------------------------------------------------
+# SSDP announcer (SmartThings hub discovery)
+# ---------------------------------------------------------------------------
+
+def _start_ssdp():
+    SSDP_ADDR   = "239.255.255.250"
+    SSDP_PORT   = 1900
+    DEVICE_PORT = 5001
+    DEVICE_TYPE = "urn:xantech:device:AudioController:1"
+    USN         = f"uuid:xantech-audio-001::{DEVICE_TYPE}"
+
+    # Auto-detect the Pi's LAN IP
+    try:
+        _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        _s.connect(("8.8.8.8", 80))
+        DEVICE_IP = _s.getsockname()[0]
+        _s.close()
+    except Exception:
+        DEVICE_IP = "192.168.1.30"
+
+    logger.info("SSDP: advertising %s at %s:%s", DEVICE_TYPE, DEVICE_IP, DEVICE_PORT)
+
+    notify_msg = "\r\n".join([
+        "NOTIFY * HTTP/1.1",
+        f"HOST: {SSDP_ADDR}:{SSDP_PORT}",
+        "CACHE-CONTROL: max-age=1800",
+        f"LOCATION: http://{DEVICE_IP}:{DEVICE_PORT}/description.xml",
+        f"NT: {DEVICE_TYPE}",
+        "NTS: ssdp:alive",
+        "SERVER: Linux/1.0 UPnP/1.0 Xantech/1.0",
+        f"USN: {USN}",
+        "", ""
+    ]).encode()
+
+    def make_response():
+        return "\r\n".join([
+            "HTTP/1.1 200 OK",
+            "CACHE-CONTROL: max-age=1800",
+            "EXT:",
+            f"LOCATION: http://{DEVICE_IP}:{DEVICE_PORT}/description.xml",
+            "SERVER: Linux/1.0 UPnP/1.0 Xantech/1.0",
+            f"ST: {DEVICE_TYPE}",
+            f"USN: {USN}",
+            "", ""
+        ]).encode()
+
+    send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    send_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
+
+    listen_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+    except AttributeError:
+        pass
+    listen_sock.bind(("", SSDP_PORT))
+    mreq = struct.pack("4sL", socket.inet_aton(SSDP_ADDR), socket.INADDR_ANY)
+    listen_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    listen_sock.settimeout(1.0)
+
+    def notify_loop():
+        while True:
+            try:
+                send_sock.sendto(notify_msg, (SSDP_ADDR, SSDP_PORT))
+            except Exception as exc:
+                logger.warning("SSDP notify error: %s", exc)
+            time.sleep(10)
+
+    def listen_loop():
+        while True:
+            try:
+                data, addr = listen_sock.recvfrom(2048)
+                msg = data.decode(errors="ignore")
+                if "M-SEARCH" in msg:
+                    send_sock.sendto(make_response(), addr)
+                    logger.debug("SSDP: M-SEARCH from %s, response sent", addr[0])
+            except socket.timeout:
+                pass
+            except Exception as exc:
+                logger.warning("SSDP listen error: %s", exc)
+
+    threading.Thread(target=notify_loop, daemon=True, name="ssdp-notify").start()
+    threading.Thread(target=listen_loop, daemon=True, name="ssdp-listen").start()
+
+
+# ---------------------------------------------------------------------------
+# Activity monitor
+# ---------------------------------------------------------------------------
+# Browse to /monitor to watch live server-side activity: serial TX/RX,
+# HTTP requests/responses, and incoming WebSocket events.
+#
+# Events are broadcast to all connected clients; the normal zone-control
+# page simply ignores the 'monitor_event' message type.  A ring buffer of
+# the last 200 entries is sent to any browser that opens /monitor so it
+# gets an immediate picture of recent activity.
+
+_monitor_buffer: collections.deque = collections.deque(maxlen=200)
+
+
+def _monitor_emit(cat: str, summary: str, detail: str = ""):
+    """Record one monitor event and push it to every connected browser."""
+    entry = {
+        "ts":      time.strftime("%H:%M:%S"),
+        "cat":     cat,
+        "summary": summary,
+        "detail":  detail,
+    }
+    _monitor_buffer.append(entry)
+    try:
+        socketio.emit("monitor_event", entry)
+    except Exception:
+        pass  # never let the monitor break the app
+
+
+class _MonitorLogHandler(logging.Handler):
+    """Forwards Python log records (including serial TX/RX) to the monitor."""
+    def emit(self, record):
+        try:
+            cat = ("ERR" if record.levelno >= logging.ERROR else
+                   "WRN" if record.levelno >= logging.WARNING else "LOG")
+            _monitor_emit(cat, record.getMessage())
+        except Exception:
+            pass
+
+
+# Attach to the root logger so we catch xantech TX/RX, streaming, everything.
+_mon_handler = _MonitorLogHandler()
+_mon_handler.setLevel(logging.DEBUG)
+logging.getLogger().addHandler(_mon_handler)
+
+
+_MONITOR_SKIP = {"/monitor", "/favicon.ico"}
+
+@app.before_request
+def _monitor_request():
+    if request.path in _MONITOR_SKIP or request.path.startswith("/static"):
+        return
+    detail = ""
+    if request.method in ("POST", "PUT") and request.content_length:
+        detail = request.get_data(as_text=True)[:500]
+    elif request.args:
+        detail = str(dict(request.args))
+    _monitor_emit("HTTP ↓", f"{request.method} {request.path}", detail)
+
+
+@app.after_request
+def _monitor_response(response):
+    if request.path in _MONITOR_SKIP or request.path.startswith("/static"):
+        return response
+    detail = ""
+    if "json" in (response.content_type or ""):
+        detail = response.get_data(as_text=True)[:300]
+    _monitor_emit("HTTP ↑", f"{response.status} {request.path}", detail)
+    return response
+
+
+@app.route("/monitor")
+def monitor_page():
+    return render_template("monitor.html", history=json.dumps(list(_monitor_buffer)))
+
+
+# ---------------------------------------------------------------------------
+# SocketIO events
+# ---------------------------------------------------------------------------
+
+
+@socketio.on("connect")
+def on_connect():
+    """Push full state to a newly connected browser."""
+    for zone, state in controller.get_all_states().items():
+        emit("zone_state", {"zone": zone, "state": state})
+    # Tell the browser whether the amplifier serial link is currently up.
+    serial_ok = controller._serial is not None and controller._serial.is_open
+    emit("serial_status", {"connected": serial_ok})
+
+
+def _ws(event: str, data=None):
+    """Log an incoming WebSocket event to the monitor."""
+    _monitor_emit("WS ↓", event, json.dumps(data) if data else "")
+
+
+def _source_has_active_zone(source_id: int) -> bool:
+    """Return True if at least one powered-on zone is currently using this source."""
+    return any(
+        st.get("power") and st.get("source") == source_id
+        for st in controller.state.values()
+    )
+
+
+def _auto_pause_if_unused(source_id: int):
+    """Pause a streaming source when no zone is actively listening to it."""
+    if source_id not in _streaming_sources:
+        return
+    if not _source_has_active_zone(source_id):
+        src = _streaming_sources[source_id]
+        logger.info("Auto-pausing source %s — no active zones", source_id)
+        try:
+            src.pause()
+        except Exception as exc:
+            logger.warning("Auto-pause error for source %s: %s", source_id, exc)
+
+
+def _nudge_streaming_play(zone: int, delay: float = 3.0):
+    """
+    After powering on a zone whose source is a streaming service, give the
+    player a nudge to start playing.  The delay lets the amplifier finish its
+    power-on sequence (PR1 → SS → VO) before we hit the streaming API.
+
+    PlexSource.play() will re-queue the last known playlist if PlexAmp has
+    gone idle, so this handles both the 'paused' and 'idle after days' cases.
+    """
+    source = controller.state[zone].get("source")
+    src    = _streaming_sources.get(source)
+    if not src:
+        return
+    def _do():
+        # Re-confirm the zone is still on and still on the same source
+        # (user might have changed their mind in the intervening seconds)
+        st = controller.state[zone]
+        if st.get("power") and st.get("source") == source:
+            src.play()
+    t = threading.Timer(delay, _do)
+    t.daemon = True
+    t.start()
+
+
+@socketio.on("set_power")
+def on_set_power(data: dict):
+    _ws("set_power", data)
+    zone = int(data["zone"])
+    on   = bool(data["on"])
+    source = controller.state[zone].get("source")
+    controller.set_power(zone, on)
+    if on:
+        _nudge_streaming_play(zone)
+    elif source in _streaming_sources:
+        _auto_pause_if_unused(source)
+
+
+@socketio.on("set_volume")
+def on_set_volume(data: dict):
+    _ws("set_volume", data)
+    controller.set_volume(int(data["zone"]), int(data["volume"]))
+
+
+@socketio.on("volume_up")
+def on_volume_up(data: dict):
+    _ws("volume_up", data)
+    controller.volume_up(int(data["zone"]))
+
+
+@socketio.on("volume_down")
+def on_volume_down(data: dict):
+    _ws("volume_down", data)
+    controller.volume_down(int(data["zone"]))
+
+
+@socketio.on("set_source")
+def on_set_source(data: dict):
+    _ws("set_source", data)
+    zone       = int(data["zone"])
+    source     = int(data["source"])
+    old_source = controller.state[zone].get("source")
+    controller.set_source(zone, source)
+    # If the zone is on and the new source is streaming, nudge it to play.
+    if controller.state[zone].get("power") and source in _streaming_sources:
+        _streaming_sources[source].play()
+    # Pause the old streaming source if nothing else is still using it.
+    if old_source != source and old_source in _streaming_sources:
+        _auto_pause_if_unused(old_source)
+
+
+@socketio.on("set_mute")
+def on_set_mute(data: dict):
+    _ws("set_mute", data)
+    controller.set_mute(int(data["zone"]), bool(data["muted"]))
+
+
+@socketio.on("all_off")
+def on_all_off():
+    _ws("all_off")
+    controller.all_off()
+    # All zones off — pause every streaming source.
+    for src_id, src in _streaming_sources.items():
+        try:
+            src.pause()
+        except Exception as exc:
+            logger.warning("Auto-pause error for source %s: %s", src_id, exc)
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    controller.connect()
+    # _startup_sync() inside xantech.py queries all zones once the serial
+    # port is open; no need to call query_all_zones() here.
+
+    _start_ssdp()
+
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=config["system"].get("webuiport", 5000),
+        debug=False,
+        use_reloader=False,
+        allow_unsafe_werkzeug=True,
+    )
