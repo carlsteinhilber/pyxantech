@@ -72,7 +72,7 @@ Hidden on the back of the Xantech 8-zone amplifiers were seldom-used RS-232 port
 - Easy to configure zone and source names
 - Control on/off, source, volume and now muting of each zone
 - Provide REST-like endpoints that allow control and status updates via IFTT, SmartThings, Home Assistant or other utilities capable of making POST/PUT/GET calls to a URL.
-- Works alongside my other GitHub projects, such as [PianoFlask](https://github.com/carlsteinhilber/pianoflask) and my SmartThings Edge Drivers for Xantech and PlexAmp.
+- Works alongside my other GitHub projects, such as [PianoFlask](https://github.com/carlsteinhilber/pianoflask) and my SmartThings Edge Drivers for [Xantech](https://github.com/carlsteinhilber/xantech-edge-driver) and [PlexAmp](https://github.com/carlsteinhilber/plex-edge-driver).
 
 ---
 
