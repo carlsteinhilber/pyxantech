@@ -1,7 +1,7 @@
 
 # PyXantech
 
-<img align="right" width="330" src="interface-2023.png" style="padding-bottom:30px; padding-left:30px;" />
+<img align="right" width="330" src="interface-2026.gif" style="padding-bottom:30px; padding-left:30px;" />
 
 A Raspberry Pi-ready Python/Flask-based, web- and LAN-enabled controller for Xantech RS-232-capable multi-zone/multi-source audio amplifiers
 
@@ -31,7 +31,7 @@ A Raspberry Pi-ready Python/Flask-based, web- and LAN-enabled controller for Xan
 
 [Change Log](#change-log)
 
-<br clear="all />
+<br clear="all" />
 
 
 ### UPDATE 2026-07-15: major new release
