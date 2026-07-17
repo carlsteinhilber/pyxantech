@@ -77,8 +77,8 @@ Hidden on the back of the Xantech 8-zone amplifiers were seldom-used RS-232 port
 ---
 
 ## Requirements
-- **RS-232 capable Xantech amp** (I use a MRC88, but the MRAUDIO8X8 should also work)[^1]
-- **Raspberry Pi**[^2] (I'm running a Raspberry Pi 3B, but have been testing on Pi 4 with no issues), running:
+- **RS-232 capable Xantech amp** (I use a MRC88, but the MRAUDIO8X8 should also work)<sup>[1]</sup>
+- **Raspberry Pi**<sup>[2]</sup> (I'm running a Raspberry Pi 3B, but have been testing on Pi 4 with no issues), running:
   - **Python 3** (PyXantech supports 3.9+)
   - **Flask** (http://flask.pocoo.org/)
   - **flask_socketio** (https://pypi.org/project/Flask-SocketIO/)
@@ -87,9 +87,10 @@ Hidden on the back of the Xantech 8-zone amplifiers were seldom-used RS-232 port
   - **PyXantech** (this project)
 - **USB-to-serial (9-pin RS-232) adapter/dongle** (something like this https://www.amazon.com/Sabrent-Converter-Prolific-Chipset-CB-DB9P/dp/B00IDSM6BW/ref=sr_1_1_sspa)
 
-<small>[^1] if you're looking to buy a Xantech amplifier specifically for this purpose, before purchase please be sure you research whether the particular product you want to buy has an RS-232 port and supports the Xantech Serial Communication Protocol (aka Xantech's "MRC88 RS232 'DIGITAL' INTERFACE"). BEWARE: products like the smaller 4-zone MRAUDIO4X4 and other Xantech 8-zone products are known to have the RS-232 port, but do *not* support the protocol. I can not be held responsible if you purchase the wrong product.</small>
+<sup>[1] if you're looking to buy a Xantech amplifier specifically for this purpose, before purchase please be sure you research whether the particular product you want to buy has an RS-232 port and supports the Xantech Serial Communication Protocol (aka Xantech's "MRC88 RS232 'DIGITAL' INTERFACE"). BEWARE: products like the smaller 4-zone MRAUDIO4X4 and other Xantech 8-zone products are known to have the RS-232 port, but do *not* support the protocol. I can not be held responsible if you purchase the wrong product.</sup>
 
-<small>[^2] while this project, and my personal ecosystem, is built on Raspberry Pis, realistically there should be no reason why it can't be implemented on other platforms such as mini-PCs or NUCs, or WiiM devices. However, I will leave any translation required from a Raspberry Pi to whatever systems you may decide to use up to you.</small>
+<sup>[2] while this project, and my personal ecosystem, is built on Raspberry Pis, realistically there should be no reason why it can't be implemented on other platforms such as mini-PCs or NUCs, or WiiM devices. However, I will leave any translation required from a Raspberry Pi to whatever systems you may decide to use up to you.</sup>
+
 ---
 
 ## Set-up
@@ -188,7 +189,7 @@ sudo git clone https://github.com/carlsteinhilber/pyxantech.git
 
 PyXantech should now be installed, and ready to be configured for your particular setup
 
-### 4. Configure PyXantech
+### 5. Configure PyXantech
 
 Create **config.json** (see [Configuration](#configuration) below)
   - this configuration file combines the information for both the zones and the sources for the Xantech amplifier 
@@ -201,7 +202,7 @@ cd pyxantech
 python app.py
 ```
 
-### 5. Test PyXantech control
+### 6. Test PyXantech control
 
 Open a web browser on a device on the same network as your Pi, and point it to port 5000 on the IP address of the Pi (for example: http://192.168.1.20:5000)
   - the port number is definable in the config.json, but defaults to 5000
@@ -262,8 +263,8 @@ The config file JSON has four main branches - for System, Zones. Sources, and a 
     "plex": {
         "ip_address": "192.168.1.xxx",
         "port": 32400,
-        "token": "<your Plex Media Server token>",
-        "machine_identifier": "<your PMS machine ID>",
+        "token": "<*your Plex Media Server token*>",
+        "machine_identifier": "<*your PMS machine ID*>",
         "default_playlist_id": ""
     },
     "zones": [
@@ -337,14 +338,14 @@ sudo systemctl restart xantech
 ## Sending commands on URL
 The PyXantech Pi can receive commands via URL, similar to a REST endpoint, useful for implementing IFTTT handlers or other external processes capable of posting data to the Pi. This functionality was introduced in an earlier update, but has been significantly enhanced, and thus the base URL has changed and behaves a bit differently.
 
-The base URL is now `http://<the IP or URI of the PyXantech Pi>/api/zones`
+The base URL is now `http://<*your pi's IP address*>:<*webuiport port number*>/api/zones`
 
 ### Retrieving zone states
 
 The base URL accepts a PUT or a GET with no parameters or payload, and returns the state of all enabled zones (only zones with `"enabled":true` setting in config.json)
 
 Ex:
-`http://192.168.1.xxx/api/zones`
+`http://192.168.1.xxx:5000/api/zones`
 
 ```json
 {
@@ -357,7 +358,7 @@ Ex:
 
 You can also retrieve the state of a specific zone, by adding the zone number to the base URL
 Ex:
-`http://192.168.1.xxx/api/zones/3`
+`http://192.168.1.xxx:5000/api/zones/3`
 
 ```json
 {
@@ -378,7 +379,7 @@ Add the zone number and "set" command to the base URL to set the state of a zone
 
 Ex:
 
-`PUT http://192.168.1.xxx/api/zones/3/set`
+`PUT http://192.168.1.xxx:5000/api/zones/3/set`
 
 with a request payload of
 
@@ -393,7 +394,7 @@ will power on zone 3, set it's source to "Plex", and set it's volume to 20
 
 OR
 
-`PUT http://192.168.1.xxx/api/zones/3/set?power=1&source=5&volume=20`
+`PUT http://192.168.1.xxx:5000/api/zones/3/set?power=1&source=5&volume=20`
 
 will do the same thing.
 
@@ -428,7 +429,7 @@ Attempting to set a string value that can not be mapped will result in a 400 res
 
 There is one special zone state, elevated to a single command:
 
-`http://192.168.1.xxx/api/zones/off`
+`http://192.168.1.xxx:5000/api/zones/off`
 
 will power off all zones.
 
@@ -439,7 +440,7 @@ The Flask app also has a separate set of URLs for interacting with streaming dev
 
 Those URLs are:
 
-`/api/streaming/<source_id>/status`: returns the status of a source.
+`http://192.168.1.xxx:5000/api/streaming/<source_id>/status`: returns the status of a source.
 
 So the status response example for a Plex source would be:
 
@@ -459,19 +460,19 @@ So the status response example for a Plex source would be:
 }
 ```
 
-`POST /api/streaming/<source_id>/play`: begins playback of the specified source
+`POST http://192.168.1.xxx:5000/api/streaming/<source_id>/play`: begins playback of the specified source
 
-`POST /api/streaming/<source_id>/pause`: pauses playback of the specified source
+`POST http://192.168.1.xxx:5000/api/streaming/<source_id>/pause`: pauses playback of the specified source
 
-`POST /api/streaming/<source_id>/next`: skips playback of the specified source to the next track
+`POST http://192.168.1.xxx:5000/api/streaming/<source_id>/next`: skips playback of the specified source to the next track
 
-`POST /api/streaming/<source_id>/prev`: skips playback of the specified source to the previous track
+`POST http://192.168.1.xxx:5000/api/streaming/<source_id>/prev`: skips playback of the specified source to the previous track
 
-`/api/streaming/<source_id>/playlists`: retrieves the list of playlists for the source
+`http://192.168.1.xxx:5000/api/streaming/<source_id>/playlists`: retrieves the list of playlists for the source
 
-`POST /api/streaming/<source_id>/playlists`: sets the playlist for the source
+`POST http://192.168.1.xxx:5000/api/streaming/<source_id>/playlists`: sets the playlist for the source
 
-So posting `http://192.168.1.xxx/api/streaming/5/playlists` with a JSON payload of
+So posting `http://192.168.1.xxx:5000/api/streaming/5/playlists` with a JSON payload of
 ```json
 {
     "id": 12345,

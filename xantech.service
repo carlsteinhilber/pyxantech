@@ -6,8 +6,8 @@ Requires=network-online.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/pyxantech5/
-ExecStart=/usr/bin/python3 /home/pi/pyxantech5/app.py
+WorkingDirectory=/home/pi/pyxantech/
+ExecStart=/usr/bin/python3 /home/pi/pyxantech/app.py
 
 Restart=always
 RestartSec=5
