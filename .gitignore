@@ -131,3 +131,5 @@ config.json
 
 
 
+*.ai
+*.psd
