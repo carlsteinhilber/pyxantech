@@ -124,4 +124,8 @@ dmypy.json
 .pyre/
 
 # project specific
+config.json
 .json
+.ai
+.psd
+
